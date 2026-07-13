@@ -39,7 +39,7 @@ metrics:
     source: federal_register
     label: Presidential memoranda / day
     date_added: 2026-07-13
-    params: { subtype: presidential_memorandum }
+    params: { subtype: memorandum }
 
   # ---- GDELT: what the world's news covers (share of all coverage) -------
   - id: news_tariffs
