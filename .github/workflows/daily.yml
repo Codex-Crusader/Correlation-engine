@@ -1,0 +1,66 @@
+# Daily pipeline: fetch -> analyze -> render -> commit.
+#
+# Scheduled workflows can run 30+ minutes late or be skipped entirely, and
+# the pipeline is built for that: fetchers request a date RANGE ending today
+# (backfilling any gap), the analysis reads whatever history exists, and
+# re-running the same day is idempotent. workflow_dispatch is enabled so a
+# skipped day can be run by hand with zero special handling.
+#
+# GitHub Pages should be configured to serve from the main branch /docs
+# folder (Settings -> Pages -> Deploy from a branch -> main /docs).
+
+name: daily
+
+on:
+  schedule:
+    - cron: "30 6 * * *"   # 06:30 UTC; odd minute avoids the on-the-hour rush
+  workflow_dispatch:
+
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+      - name: Fetch data
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python -m src.fetch
+
+      - name: Analyze
+        run: python -m src.analyze
+
+      - name: Render site
+        run: python -m src.render_site
+
+      - name: Commit data, results, and site
+        run: |
+          git config user.name "correlation-engine[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/ results/ docs/
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+            exit 0
+          fi
+          git commit -m "daily run $(date -u +%F)"
+          # Retry once in case something else pushed meanwhile.
+          git push || (git pull --rebase && git push)
