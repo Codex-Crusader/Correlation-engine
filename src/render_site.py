@@ -254,7 +254,7 @@ def main():
         "__STAB_MIN__": str(settings["stability_min"]),
         "__STAB_RUNS__": str(settings["stability_window"]),
         "__EDGE_TABLE__": edge_table(summary),
-        "__REPO_URL__": "https://github.com/YOUR_USERNAME/YOUR_REPO",
+        "__REPO_URL__": "https://github.com/Codex-Crusader/Correlation-engine",
         "__DATA_JSON__": json.dumps(summary),
     }.items():
         html = html.replace(marker, value)

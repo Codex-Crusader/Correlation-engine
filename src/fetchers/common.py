@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 
 USER_AGENT = (
-    "correlation-engine/1.0 (https://github.com/YOUR_USERNAME/YOUR_REPO; "
+    "correlation-engine/1.0 (https://github.com/Codex-Crusader/Correlation-engine; "
     "daily research pipeline)"
 )
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
