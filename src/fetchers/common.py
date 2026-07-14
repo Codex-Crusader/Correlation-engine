@@ -23,11 +23,21 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 def get_json(url, params=None, max_retries=4, base_delay=5):
-    """GET with a proper User-Agent, exponential backoff, and 429 handling."""
+    """GET with a proper User-Agent, exponential backoff, and 429 handling.
+
+    Retries on 429, 5xx, and transient network failures (connection/read
+    timeouts, dropped connections), any of which a free public API like
+    GDELT hits periodically."""
     for attempt in range(max_retries):
-        response = requests.get(
-            url, params=params, headers={"User-Agent": USER_AGENT}, timeout=60
-        )
+        try:
+            response = requests.get(
+                url, params=params, headers={"User-Agent": USER_AGENT}, timeout=60
+            )
+        except requests.exceptions.RequestException:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(base_delay * 2 ** attempt)
+            continue
         if response.status_code == 429:
             wait = int(response.headers.get("Retry-After", base_delay * 2 ** attempt))
             time.sleep(min(wait, 300))
