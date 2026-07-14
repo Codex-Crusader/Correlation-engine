@@ -62,5 +62,11 @@ jobs:
             exit 0
           fi
           git commit -m "daily run $(date -u +%F)"
-          # Retry once in case something else pushed meanwhile.
-          git push || (git pull --rebase && git push)
+          # Another run may have pushed meanwhile. Everything this job
+          # commits is regenerated output, so on conflict the freshly
+          # generated local version wins (-X theirs = ours during rebase).
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase -X theirs || { git rebase --abort; exit 1; }
+          done
+          git push
