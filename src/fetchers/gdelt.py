@@ -28,13 +28,30 @@ API_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 # calls matter more than partial progress: exceeding GDELT's budget blocks
 # the IP for ~20 minutes, far longer than any sane retry schedule.
 CHUNK_DAYS = 1095
-SECONDS_BETWEEN_CALLS = 10  # GDELT asks for >= 5s; extra margin for shared CI IPs
+# GDELT asks for >= 5s between calls, but its real budget is stingier: at
+# 10s spacing an IP gets blocked after ~4-7 calls (observed both locally and
+# on GitHub runners), while 45s spacing got 7 consecutive full-history calls
+# through cleanly. ~30 extra seconds per metric is nothing in a 45-min job.
+SECONDS_BETWEEN_CALLS = 45
 MAX_RETRIES = 5
 BASE_DELAY = 10  # waits 10/20/40/80s between attempts (capped in get_json)
 
 # Set once any call gives up: the IP is throttled, so further calls this run
 # are pointless. fetch() checks it and fails fast per metric.
 _throttled = False
+
+# Pacing must span metrics, not just chunks within one metric: with a whole
+# metric served by a single call, back-to-back fetch() calls would otherwise
+# hit the API with no gap at all (which is exactly what got CI blocked).
+_last_call_at = 0.0
+
+
+def _pace():
+    global _last_call_at
+    wait = SECONDS_BETWEEN_CALLS - (time.monotonic() - _last_call_at)
+    if wait > 0:
+        time.sleep(wait)
+    _last_call_at = time.monotonic()
 
 
 def fetch_daily_share(query: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.Series:
@@ -48,6 +65,7 @@ def fetch_daily_share(query: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.
     chunk_start = start
     while chunk_start <= end:
         chunk_end = min(chunk_start + pd.Timedelta(days=CHUNK_DAYS - 1), end)
+        _pace()
         try:
             payload = get_json(API_URL, params={
                 "query": query,
@@ -74,8 +92,6 @@ def fetch_daily_share(query: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.
             if norm > 0:
                 points[date] = 100.0 * entry.get("value", 0) / norm
         chunk_start = chunk_end + pd.Timedelta(days=1)
-        if chunk_start <= end:  # no point sleeping after the final chunk
-            time.sleep(SECONDS_BETWEEN_CALLS)
     return pd.Series(points).sort_index()
 
 
