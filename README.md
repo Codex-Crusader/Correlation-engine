@@ -1,155 +1,154 @@
+> Please read [LICENSE](LICENSE) and [DISCLAIMER.md](DISCLAIMER.md) before using this project.
+
 # Correlation Engine
 
-A daily-updating correlation scan that runs entirely on GitHub Actions. No
-server, no database, no paid APIs. Every day it pulls a fixed pool of time
-series (government announcements, news coverage volumes, economic
-indicators, public attention), tests every pair for correlated changes, and
-publishes a static page showing the strongest stable patterns next to what
-the identical pipeline finds in pure noise.
+[![daily](https://github.com/Codex-Crusader/Correlation-engine/actions/workflows/daily.yml/badge.svg)](https://github.com/Codex-Crusader/Correlation-engine/actions/workflows/daily.yml)
+[![Live Site](https://img.shields.io/badge/Live%20Site-GitHub%20Pages-46E3B7?logo=github&logoColor=white)](https://codex-crusader.github.io/Correlation-engine/)
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+![Correlation ≠ Causation](https://img.shields.io/badge/Correlation-%E2%89%A0%20Causation-critical)
+![Noise Included](https://img.shields.io/badge/Noise%20Baseline-Included%20Free-lightgrey)
+![Zero Is Valid](https://img.shields.io/badge/0%20findings-a%20valid%20result-yellow)
+![Server Count](https://img.shields.io/badge/Servers-0-green)
 
-The honesty is the product. A naive version of this tool is a machine for
-generating false claims; everything below exists to prevent that.
+**[See the live site](https://codex-crusader.github.io/Correlation-engine/) - rebuilt daily by GitHub Actions. No server, no database, no paid APIs.**
 
-## What an edge means, and what it does not mean
+---
 
-An edge means two *change* series moved together, possibly at a lag of up to
-7 days, consistently across the last two weeks of runs. It does not mean one
-caused the other. Government announcements usually respond to events, so
-even a clean lead–lag ordering routinely points backwards, and most
-co-movement in this pool is driven by a third thing (an election, a crisis,
-a news cycle) touching both series. The tool never uses causal language, and
-neither should you when quoting it.
+Most correlation dashboards are machines for generating false claims: test
+enough pairs and something always "significant" falls out. This one runs the
+search anyway - 26 daily time series, every pair, every lag from −7 to +7
+days - and then shows you, with equal visual weight, **what the identical
+pipeline finds in pure noise.** It has been committing every observation and
+every claim to this repo since day one, so its entire track record is
+auditable in the git log.
 
-## The four filters
+---
 
-Every published edge has survived all of these, in order:
+## The Part Where the Numbers Confess
 
-1. **Stationarity.** Two series that both trend upward correlate near 0.9
-   for no reason (spurious regression). Every series is differenced until it
-   passes an ADF test (max twice, then it's dropped and logged), and the
-   weekday cycle is removed from the changes, since news volume and
-   pageviews have strong weekly rhythms that would otherwise fake lag-7
-   correlations. Correlations are Spearman, on changes, never on levels.
+On a typical day this tool runs **~4,875 hypothesis tests**. At raw p < 0.05,
+about **244 of them pass by pure chance**. The placebo panel - the same
+pipeline on phase-randomized fake data with zero real relationships - finds
+about **99 "significant" edges per run** even after correction.
 
-2. **Multiple-testing correction.** With ~26 metrics and 15 lags there are
-   roughly 4,900 tests per day; at raw p < 0.05 you'd expect ~245 hits from
-   chance alone, and re-rolling daily makes it worse. Benjamini–Hochberg FDR
-   control (q < 0.05) is applied across all tests, and both raw p and
-   corrected q are stored. Honest caveat: the 15 lags of one pair are
-   positively dependent rather than independent, so q-values are
-   approximate. That approximation is one reason the placebo panel exists.
-   An effect-size floor (|ρ| ≥ 0.20) additionally drops
-   tiny-but-significant correlations.
+```
+tests run daily:      4,875
+chance hits at p<.05:  ~244   (guaranteed, that's what p<.05 means)
+noise pipeline finds:   ~99   (after FDR correction!)
+edges published:          0   (so far - and that's correct)
+```
 
-3. **Stability.** A correlation that appears once is noise. An edge is
-   published only if the same pair, with the same sign, survived filters 1–2
-   in at least 10 of the last 14 runs that actually happened.
+That is why the publication bar is brutal. Passing the statistics *once*
+means nothing. The site's headline panel puts the noise result next to the
+real one, because if they look alike, you should trust nothing - and the
+tool would rather tell you that than impress you.
 
-4. **The placebo panel.** Every day the identical pipeline also runs 20
-   times on phase-randomized surrogates: each series is FFT'd, its phases
-   are scrambled, and it's transformed back, preserving its power spectrum
-   (and so its autocorrelation) while destroying every real cross-series
-   relationship. Phase randomization was chosen over shuffling because
-   shuffling kills autocorrelation and makes noise look tamer than it is.
-   The site shows the noise panel with the same visual weight as the real
-   one. If they look alike, trust nothing.
+## How it works
 
-The site always displays: the number of tests run, the expected false
-positives at raw p < 0.05, the placebo baseline, and the number of edges
-published. Nine edges is a good day. Zero edges is a valid, honest result.
+```mermaid
+flowchart LR
+    A(["🏛 Federal Register<br>📰 GDELT news<br>📈 FRED markets<br>👀 Wikipedia views"]):::fetch
+    B(["fetch<br>daily, resumable,<br>stalest-first"]):::fetch
+    C(["data/*.csv<br>every observation<br>committed"]):::store
+    D(["analyze<br>4 filters +<br>placebo panel"]):::train
+    E(["static site<br>signal vs noise,<br>side by side"]):::serve
 
-## The metric pool
+    A --> B --> C --> D --> E
+    E -.->|"06:30 UTC daily"| B
 
-`config/metrics.yaml` is the entire pool: which series exist, how each is
-fetched, and when it was added. The model is a **fixed core with gated
-additions**. The founding pool (everything with `date_added` on or before
-`pool_founded`) was chosen before the tool had produced any output. Anything
-added later waits `eligibility_days` (60) before entering the analysis, so
-a result can never recruit the metric that would confirm it. All pool
-changes are ordinary commits, so the pool's full history is public.
+    classDef fetch fill:#e6f1fb,stroke:#378ADD,color:#042c53
+    classDef store fill:#e1f5ee,stroke:#1D9E75,color:#04342c
+    classDef train fill:#faece7,stroke:#E8593C,color:#4a1b0c
+    classDef serve fill:#eeedfe,stroke:#7F77DD,color:#3c3489
+```
 
-Keep the pool around 30–50 series. Every addition multiplies the test count,
-and the honesty panel will show it.
+An **edge** = two *change* series moved together (possibly at a lag),
+consistently, across two weeks of runs. To get published, an edge survives
+four filters:
+
+| # | Filter | Kills |
+|---|--------|-------|
+| 1 | **Stationarity** - difference until ADF passes, remove weekday cycle, Spearman on changes | spurious "two things that both trend" correlations (they correlate ~0.9 for no reason) |
+| 2 | **FDR + effect size** - Benjamini–Hochberg q < 0.05 across ALL tests, then \|ρ\| ≥ 0.20 | the ~244 free chance hits per day |
+| 3 | **Stability** - same pair, same sign, in ≥ 10 of the last 14 runs | one-day flukes (which is most survivors) |
+| 4 | **Placebo panel** - identical pipeline on phase-randomized surrogates, 20×/day | your overconfidence |
+
+**Zero published edges is a valid, honest result.** The site says so itself.
+
+## Quick start
+
+```bash
+pip install -r requirements.txt
+python -m pytest tests/                    # stats tests first
+FRED_API_KEY=yourkey python -m src.fetch   # first run backfills 2 years
+python -m src.analyze
+python -m src.render_site                  # → open docs/index.html
+```
+
+Deploying your own fork:
+
+1. Add a free [FRED key](https://fred.stlouisfed.org/docs/api/fred/) as the `FRED_API_KEY` Actions secret (optional - FRED metrics skip without it).
+2. Settings → Pages → Deploy from branch → `main`, folder `/docs`.
+3. Put your repo URL in `USER_AGENT` (`src/fetchers/common.py`) and the site footer (`src/render_site.py`).
+4. Actions → daily → Run workflow. Expect an empty graph for ~2 weeks - the stability filter needs 10 runs before anything *can* publish.
 
 ## Data sources
 
 | Source | What | Auth |
 |---|---|---|
-| [Federal Register API](https://www.federalregister.gov/developers/documentation/api/v1) | Daily counts of presidential documents (executive orders, proclamations, memoranda), structured at the source | none |
-| [GDELT DOC 2.0](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) | Daily share of global news coverage matching a topic query (`timelinevolraw`, matched/norm) | none, but needs a User-Agent and 429 backoff (handled) |
-| [FRED](https://fred.stlouisfed.org/docs/api/fred/) | Daily economic series (yields, VIX, FX, oil) | free key, repo secret `FRED_API_KEY` |
-| [Wikimedia Pageviews](https://wikimedia.org/api/rest_v1/) | Daily per-article views, bot traffic excluded (`agent=user`) | none |
+| [Federal Register](https://www.federalregister.gov/developers/documentation/api/v1) | Presidential documents per day | none |
+| [GDELT DOC 2.0](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) | Share of global news coverage per topic | none (throttles hard - [handled](docs/ARCHITECTURE.md#gdelt-specifics--the-only-source-that-fights-back)) |
+| [FRED](https://fred.stlouisfed.org/docs/api/fred/) | Yields, VIX, FX, oil | free key |
+| [Wikimedia Pageviews](https://wikimedia.org/api/rest_v1/) | Article views (bots excluded) | none |
 
-Only daily-frequency series are allowed in the pool. Mixing frequencies
-would require resampling choices that quietly manufacture autocorrelation.
+Daily-frequency series only - mixing frequencies means resampling choices
+that quietly manufacture autocorrelation.
 
-## Architecture
+## Docs
 
-```
-config/metrics.yaml        the pool and all analysis settings
-src/fetch.py               runs every fetcher; one flaky source never sinks a run
-src/fetchers/              one module per source, independently testable
-src/analyze.py             the pipeline: preprocess -> correlate -> BH -> placebo -> stability
-src/stats/                 the statistics package (the heart of the project)
-src/render_site.py         results/latest.json -> docs/index.html
-data/                      one CSV per metric, committed every run
-results/history/           one JSON per run: the edges that survived that day
-docs/                      the published site (GitHub Pages, main branch /docs)
-.github/workflows/daily.yml
-```
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** is the deep dive: code-flow
+diagrams for every stage, every config variable and module constant explained,
+data formats, failure modes and how they self-heal, and how to add a metric
+(spoiler: one YAML entry + one commit; a 60-day gate stops today's news from
+picking today's metrics).
 
-**Git-scraping.** Every fetched observation and every daily result is
-committed, so the full history of what the tool saw and claimed is auditable
-by anyone reading the log. CSV rather than Parquet, deliberately: the commit
-log is the audit trail and CSV diffs are human-readable.
+<details>
+<summary><strong>Known limits, stated plainly</strong></summary>
 
-**Cron reliability.** GitHub scheduled workflows run late or get skipped.
-The pipeline assumes nothing: fetchers request a date *range* ending today
-(first run backfills from `history_start`, later runs re-request a trailing
-`refetch_days` window to catch revisions and fill gaps), merges are keyed by
-date so re-running a day is idempotent, and the stability filter counts
-*runs that happened*, not calendar days. A skipped day needs no special
-handling; run `workflow_dispatch` by hand or just wait for tomorrow.
-
-## Setup
-
-1. Create the repo, push this code.
-2. Get a free FRED key and add it as the `FRED_API_KEY` Actions secret.
-   (Without it, FRED metrics are skipped with a warning; everything else
-   still runs.)
-3. Settings → Pages → Deploy from a branch → `main`, folder `/docs`.
-4. Update `USER_AGENT` in `src/fetchers/common.py` and the repo URL in
-   `src/render_site.py` with your real repo path. Wikimedia's API policy
-   requires a User-Agent with contact info.
-5. Run the workflow once by hand (Actions → daily → Run workflow). The
-   first run backfills two years of history and takes the longest.
-6. Nothing publishes until an edge has recurred in 10 of the last 14 runs,
-   so expect an empty (and correct) graph for roughly the first two weeks.
-
-Run locally:
-
-```bash
-pip install -r requirements.txt
-python -m pytest tests/          # the stats tests; run these first
-FRED_API_KEY=yourkey python -m src.fetch
-python -m src.analyze
-python -m src.render_site        # then open docs/index.html
-```
-
-## Known limits, stated plainly
-
-- **Selection bias survives the gate.** The founding pool was still chosen
-  by a person with priors. The gate stops results-driven additions; it
-  cannot make the initial choice neutral. The pool file's git history is the
-  disclosure.
-- **q-values are approximate** under lag dependence, as above.
-- **Zero-inflated series.** Executive orders are zero most days and the
-  Federal Register doesn't publish weekends. Spearman and the weekday
-  adjustment soften this, but sparse-event series are the pool's weakest
-  members statistically.
-- **GDELT availability.** The DOC API has intermittent outages and rate
-  limits. A failed source logs and skips; the range-based refetch fills the
-  hole on the next successful run.
-- **This finds patterns, not truths.** The correct reading of any edge is:
+- **Selection bias survives the gate.** The founding pool was chosen by a
+  person with priors. The gate stops results-driven additions; it cannot make
+  the initial choice neutral. The pool file's git history is the disclosure.
+- **q-values are approximate** - a pair's 15 lags are positively dependent,
+  not independent. That's one reason the placebo panel exists.
+- **Zero-inflated series.** Executive orders are 0 most days; the Federal
+  Register skips weekends. Spearman + weekday adjustment soften this, but
+  sparse-event series are the pool's statistically weakest members.
+- **GDELT availability.** Intermittent outages and aggressive rate limits;
+  failures skip and the range-based refetch backfills on the next success.
+- **This finds patterns, not truths.** The correct reading of any edge:
   "out of ~4,900 searches today, this pattern was the most persistent, and
   here is what pure noise produces under the same search." Nothing more.
+
+</details>
+
+<details>
+<summary><strong>Why an edge is never a causal claim</strong></summary>
+
+Government announcements usually *respond* to events, so even a clean
+lead–lag ordering routinely points backwards, and most co-movement in this
+pool is driven by a third thing (an election, a crisis, a news cycle)
+touching both series. The tool never uses causal language - and neither
+should you when quoting it. See [DISCLAIMER.md](DISCLAIMER.md).
+
+</details>
+
+## The Point of All This
+
+This project is about statistical honesty, not discoveries. A dashboard that
+publishes nothing for two weeks because nothing recurred is more defensible
+than one that publishes 99 noise edges a day with confidence. The empty graph
+is the right result until the data earns a full one.
+
+> Run enough hypothesis tests and you will always find something. The only
+> honest move is to run the same search on noise, print both numbers, and
+> let the reader calibrate - which is exactly what the site does, every day.

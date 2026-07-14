@@ -22,7 +22,7 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Correlation Engine — daily pattern scan with its error bars showing</title>
+<title>Correlation Engine - daily pattern scan with its error bars showing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -78,7 +78,7 @@ a { color: inherit; }
 <header>
   <h1>Correlation Engine</h1>
   <p class="subtitle">A daily scan for statistical patterns across government
-  announcements, news coverage, economic indicators, and public attention —
+  announcements, news coverage, economic indicators, and public attention -
   shown next to what pure noise produces under the identical pipeline.
   <strong>Nothing on this page is a causal claim.</strong></p>
   <p class="rundate">run __RUN_DATE__ · __N_METRICS__ metrics · lags −__MAX_LAG__…+__MAX_LAG__ days</p>
@@ -93,12 +93,12 @@ a { color: inherit; }
 
 <section class="panels">
   <div class="panel">
-    <h3>Signal — stable edges</h3>
+    <h3>Signal - stable edges</h3>
     <p>Survived FDR q &lt; __FDR_Q__, |ρ| ≥ __MIN_RHO__, and appeared in ≥ __STAB_MIN__ of the last __STAB_RUNS__ runs.</p>
     <svg id="graph-real" viewBox="0 0 460 460"></svg>
   </div>
   <div class="panel">
-    <h3>Noise — placebo panel</h3>
+    <h3>Noise - placebo panel</h3>
     <p>The identical analysis run on phase-randomized surrogates: same wiggliness, no real relationships. If this side has edges too, calibrate your trust accordingly.</p>
     <svg id="graph-placebo" viewBox="0 0 460 460"></svg>
   </div>
@@ -123,7 +123,7 @@ a { color: inherit; }
   guarantees chance hits; the strip above says how many. Benjamini–Hochberg
   correction bounds the expected false-discovery share at __FDR_Q_PCT__%.
   The lags of a single pair are not independent tests, so treat q-values as
-  approximate — which is what the noise panel is for.</p>
+  approximate - which is what the noise panel is for.</p>
   <p><strong>Stability.</strong> A pattern that appears once is noise. Edges
   are published only after recurring, with the same sign, across most of the
   recent daily runs.</p>
