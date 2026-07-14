@@ -23,8 +23,8 @@ def is_stationary(series: pd.Series) -> bool:
         return False
     if np.allclose(values, values[0]):
         return False  # constant series: nothing to correlate
-    p_value = adfuller(values, autolag="AIC")[1]
-    return p_value < ADF_ALPHA
+    adf_result: tuple = adfuller(values, autolag="AIC")
+    return adf_result[1] < ADF_ALPHA
 
 
 def make_stationary(series: pd.Series):
@@ -44,7 +44,8 @@ def make_stationary(series: pd.Series):
 
 def remove_weekday_effect(series: pd.Series) -> pd.Series:
     """Subtract each weekday's mean, computed on the series itself."""
-    weekday_means = series.groupby(series.index.dayofweek).transform("mean")
+    weekdays = pd.DatetimeIndex(series.index).dayofweek
+    weekday_means = series.groupby(weekdays).transform("mean")
     return series - weekday_means
 
 

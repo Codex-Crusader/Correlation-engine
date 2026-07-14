@@ -35,6 +35,8 @@ def main():
     successes, failures = 0, 0
     for metric in config["metrics"]:
         fetcher = FETCHERS[metric["source"]]
+        # noinspection PyBroadException -- deliberate: one flaky source must
+        # not sink the whole run (see module docstring)
         try:
             rows = fetcher(metric, settings)
             print(f"  OK   {metric['id']}: {rows} rows stored")

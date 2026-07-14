@@ -9,6 +9,7 @@ by date, so runs are idempotent: re-running today rewrites the same rows,
 and a range fetch automatically backfills any days a skipped cron missed.
 """
 
+import datetime
 import time
 from pathlib import Path
 
@@ -22,12 +23,22 @@ USER_AGENT = (
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
+class PermanentAPIError(RuntimeError):
+    """The API rejected the request itself (bad query, etc.): retrying or
+    backing off will not help, and it says nothing about rate limits."""
+
+
 def get_json(url, params=None, max_retries=4, base_delay=5):
     """GET with a proper User-Agent, exponential backoff, and 429 handling.
 
-    Retries on 429, 5xx, and transient network failures (connection/read
-    timeouts, dropped connections), any of which a free public API like
-    GDELT hits periodically."""
+    Retries on 429, 5xx, transient network failures (connection/read timeouts,
+    dropped connections), and throttle responses that arrive as a 200 with a
+    non-JSON body -- all of which a free public API like GDELT hits
+    periodically. GDELT in particular rate-limits by returning HTTP 200 and a
+    plain-text notice ("Please limit requests to one every 5 seconds ...")
+    rather than a 429, so an unparseable body is treated as a retryable
+    throttle."""
+    last_status = None
     for attempt in range(max_retries):
         try:
             response = requests.get(
@@ -36,18 +47,35 @@ def get_json(url, params=None, max_retries=4, base_delay=5):
         except requests.exceptions.RequestException:
             if attempt == max_retries - 1:
                 raise
-            time.sleep(base_delay * 2 ** attempt)
+            time.sleep(min(base_delay * 2 ** attempt, 120))
             continue
+        last_status = response.status_code
         if response.status_code == 429:
             wait = int(response.headers.get("Retry-After", base_delay * 2 ** attempt))
             time.sleep(min(wait, 300))
             continue
         if response.status_code >= 500:
-            time.sleep(base_delay * 2 ** attempt)
+            time.sleep(min(base_delay * 2 ** attempt, 120))
             continue
         response.raise_for_status()
-        return response.json()
-    raise RuntimeError(f"Gave up on {url} after {max_retries} attempts")
+        try:
+            return response.json()
+        except ValueError:
+            # GDELT reports both throttling and query errors as HTTP 200 with
+            # a plain-text body. Only throttling is worth retrying; anything
+            # else (e.g. a bad query) is permanent, so fail fast and loudly.
+            body = response.text[:300]
+            if "limit requests" not in body.lower():
+                raise PermanentAPIError(f"{url} returned an error body: {body!r}")
+            if attempt == max_retries - 1:
+                raise RuntimeError(
+                    f"{url} still throttled after {max_retries} attempts: {body!r}"
+                )
+            time.sleep(min(base_delay * 2 ** attempt, 120))
+    raise RuntimeError(
+        f"Gave up on {url} after {max_retries} attempts "
+        f"(last HTTP status: {last_status})"
+    )
 
 
 def series_path(metric_id: str) -> Path:
@@ -63,7 +91,7 @@ def load_series(metric_id: str) -> pd.Series:
     return frame["value"]
 
 
-def last_stored_date(metric_id: str):
+def last_stored_date(metric_id: str) -> datetime.date | None:
     series = load_series(metric_id)
     return None if series.empty else series.index.max().date()
 
@@ -82,14 +110,16 @@ def merge_series(metric_id: str, new_series: pd.Series) -> int:
     return len(combined)
 
 
-def fetch_window(metric_id: str, history_start: str, refetch_days: int):
+def fetch_window(
+    metric_id: str, history_start: str, refetch_days: int
+) -> tuple[datetime.date, datetime.date]:
     """Date range a fetcher should request: from history_start on the first
     run, otherwise from a few days before the last stored date, to catch
     late-arriving revisions and fill cron gaps."""
     last = last_stored_date(metric_id)
-    today = pd.Timestamp.utcnow().date()
+    today = datetime.datetime.now(datetime.timezone.utc).date()
     if last is None:
         start = pd.Timestamp(history_start).date()
     else:
-        start = last - pd.Timedelta(days=refetch_days)
+        start = last - datetime.timedelta(days=refetch_days)
     return start, today

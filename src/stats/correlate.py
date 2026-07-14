@@ -29,7 +29,7 @@ class PairResult:
     rho: float
     p_value: float
     n_overlap: int
-    q_value: float = None  # filled in by the BH correction step
+    q_value: float | None = None  # filled in by the BH correction step
 
 
 def lagged_correlations(series_by_id: dict, max_lag: int, min_overlap: int):
@@ -46,9 +46,10 @@ def lagged_correlations(series_by_id: dict, max_lag: int, min_overlap: int):
         series_b = series_by_id[name_b]
         for lag in range(-max_lag, max_lag + 1):
             n_tests += 1
-            aligned = pd.concat(
+            frame: pd.DataFrame = pd.concat(
                 [series_a, series_b.shift(-lag)], axis=1, keys=["a", "b"]
-            ).dropna()
+            )
+            aligned = frame.dropna()
             if len(aligned) < min_overlap:
                 continue
             rho, p_value = spearmanr(aligned["a"], aligned["b"])

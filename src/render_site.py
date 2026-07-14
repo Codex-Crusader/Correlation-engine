@@ -216,7 +216,7 @@ def edge_table(summary):
                 "That is a valid, honest result, not a malfunction.</p>")
     labels = summary["labels"]
     rows = []
-    for e in sorted(edges, key=lambda e: -abs(e["rho"])):
+    for e in sorted(edges, key=lambda edge: -abs(edge["rho"])):
         sign_class = "pos" if e["rho"] >= 0 else "neg"
         rows.append(
             "<tr>"

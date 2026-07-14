@@ -3,7 +3,6 @@ project; nothing else matters if these are wrong."""
 
 import numpy as np
 import pandas as pd
-import pytest
 from scipy import stats as scipy_stats
 
 from src.stats import (
@@ -56,7 +55,7 @@ def test_weekday_effect_is_removed():
     weekly_cycle = np.where(index.dayofweek < 5, 10.0, 0.0)
     series = pd.Series(weekly_cycle + RNG.normal(size=len(index)), index=index)
     adjusted = remove_weekday_effect(series)
-    weekday_means = adjusted.groupby(adjusted.index.dayofweek).mean()
+    weekday_means = adjusted.groupby(pd.DatetimeIndex(adjusted.index).dayofweek).mean()
     assert np.allclose(weekday_means, 0.0, atol=1e-9)
 
 
@@ -71,7 +70,8 @@ def test_two_trending_series_do_not_correlate_after_preprocess():
 
     processed_a, _ = preprocess(series_a)
     processed_b, _ = preprocess(series_b)
-    aligned = pd.concat([processed_a, processed_b], axis=1).dropna()
+    frame: pd.DataFrame = pd.concat([processed_a, processed_b], axis=1)
+    aligned = frame.dropna()
     change_rho = scipy_stats.spearmanr(aligned.iloc[:, 0], aligned.iloc[:, 1])[0]
     assert abs(change_rho) < 0.15  # and preprocessing defuses it
 
