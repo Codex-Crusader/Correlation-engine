@@ -59,8 +59,8 @@
    "metric_a": "attn_executive_order",
    "metric_b": "news_immigration",
    "lag": 0,
-   "rho": 0.3109,
-   "p_value": 1.198e-17,
+   "rho": 0.3112,
+   "p_value": 1.13e-17,
    "n_overlap": 722,
    "q_value": 0.0
   },
@@ -122,8 +122,8 @@
    "metric_a": "attn_federal_reserve",
    "metric_b": "news_disasters",
    "lag": -5,
-   "rho": 0.4166,
-   "p_value": 1.79e-31,
+   "rho": 0.4167,
+   "p_value": 1.764e-31,
    "n_overlap": 717,
    "q_value": 0.0
   },
@@ -132,7 +132,7 @@
    "metric_b": "news_interest_rates",
    "lag": 0,
    "rho": 0.4636,
-   "p_value": 9.278e-40,
+   "p_value": 9.23e-40,
    "n_overlap": 722,
    "q_value": 0.0
   },
@@ -140,8 +140,8 @@
    "metric_a": "attn_federal_reserve",
    "metric_b": "news_sanctions",
    "lag": 5,
-   "rho": -0.2805,
-   "p_value": 1.917e-14,
+   "rho": -0.2801,
+   "p_value": 2.084e-14,
    "n_overlap": 718,
    "q_value": 0.0
   },
@@ -186,7 +186,7 @@
    "metric_b": "news_interest_rates",
    "lag": 0,
    "rho": 0.2504,
-   "p_value": 8.812e-12,
+   "p_value": 8.758e-12,
    "n_overlap": 722,
    "q_value": 0.0
   },
@@ -204,7 +204,7 @@
    "metric_b": "news_sanctions",
    "lag": -1,
    "rho": -0.3839,
-   "p_value": 9.897e-27,
+   "p_value": 9.714e-27,
    "n_overlap": 721,
    "q_value": 0.0
   },
@@ -239,8 +239,8 @@
    "metric_a": "attn_tariff",
    "metric_b": "news_disasters",
    "lag": -7,
-   "rho": 0.3063,
-   "p_value": 5.421e-17,
+   "rho": 0.3061,
+   "p_value": 5.615e-17,
    "n_overlap": 715,
    "q_value": 0.0
   },
@@ -257,8 +257,8 @@
    "metric_a": "attn_tariff",
    "metric_b": "news_sanctions",
    "lag": -6,
-   "rho": -0.2356,
-   "p_value": 1.734e-10,
+   "rho": -0.2357,
+   "p_value": 1.706e-10,
    "n_overlap": 716,
    "q_value": 0.0
   },
@@ -302,8 +302,8 @@
    "metric_a": "econ_vix",
    "metric_b": "news_disasters",
    "lag": -7,
-   "rho": -0.2694,
-   "p_value": 7.909e-10,
+   "rho": -0.2693,
+   "p_value": 7.979e-10,
    "n_overlap": 504,
    "q_value": 0.0
   },
@@ -312,7 +312,7 @@
    "metric_b": "news_interest_rates",
    "lag": 7,
    "rho": -0.2114,
-   "p_value": 1.598e-06,
+   "p_value": 1.597e-06,
    "n_overlap": 506,
    "q_value": 0.0
   },
@@ -320,8 +320,8 @@
    "metric_a": "econ_yield_spread",
    "metric_b": "news_disasters",
    "lag": 6,
-   "rho": -0.314,
-   "p_value": 1.076e-12,
+   "rho": -0.3139,
+   "p_value": 1.089e-12,
    "n_overlap": 491,
    "q_value": 0.0
   },
@@ -329,8 +329,8 @@
    "metric_a": "econ_yield_spread",
    "metric_b": "news_immigration",
    "lag": 1,
-   "rho": 0.489,
-   "p_value": 4.711e-31,
+   "rho": 0.4886,
+   "p_value": 5.22e-31,
    "n_overlap": 494,
    "q_value": 0.0
   },
@@ -338,8 +338,8 @@
    "metric_a": "econ_yield_spread",
    "metric_b": "news_interest_rates",
    "lag": 3,
-   "rho": -0.3176,
-   "p_value": 5.154e-13,
+   "rho": -0.3175,
+   "p_value": 5.181e-13,
    "n_overlap": 493,
    "q_value": 0.0
   },
@@ -356,8 +356,8 @@
    "metric_a": "econ_yield_spread",
    "metric_b": "news_protest",
    "lag": 1,
-   "rho": 0.2586,
-   "p_value": 5.491e-09,
+   "rho": 0.2583,
+   "p_value": 5.678e-09,
    "n_overlap": 494,
    "q_value": 0.0
   },
@@ -402,7 +402,7 @@
    "metric_b": "news_interest_rates",
    "lag": -5,
    "rho": -0.2983,
-   "p_value": 3.206e-16,
+   "p_value": 3.223e-16,
    "n_overlap": 718,
    "q_value": 0.0
   },
@@ -411,7 +411,7 @@
    "metric_b": "news_sanctions",
    "lag": 7,
    "rho": 0.3574,
-   "p_value": 5.429e-23,
+   "p_value": 5.373e-23,
    "n_overlap": 716,
    "q_value": 0.0
   },
@@ -419,8 +419,8 @@
    "metric_a": "news_disasters",
    "metric_b": "news_interest_rates",
    "lag": 3,
-   "rho": 0.2943,
-   "p_value": 7.485e-16,
+   "rho": 0.2942,
+   "p_value": 7.595e-16,
    "n_overlap": 720,
    "q_value": 0.0
   },
@@ -428,8 +428,8 @@
    "metric_a": "news_disasters",
    "metric_b": "news_sanctions",
    "lag": 7,
-   "rho": -0.3194,
-   "p_value": 1.922e-18,
+   "rho": -0.3196,
+   "p_value": 1.836e-18,
    "n_overlap": 716,
    "q_value": 0.0
   },
@@ -437,8 +437,8 @@
    "metric_a": "news_immigration",
    "metric_b": "news_outbreak",
    "lag": 2,
-   "rho": -0.3435,
-   "p_value": 2.169e-21,
+   "rho": -0.3436,
+   "p_value": 2.103e-21,
    "n_overlap": 721,
    "q_value": 0.0
   },
@@ -446,8 +446,8 @@
    "metric_a": "news_immigration",
    "metric_b": "news_protest",
    "lag": 0,
-   "rho": 0.3652,
-   "p_value": 3.105e-24,
+   "rho": 0.3653,
+   "p_value": 3.012e-24,
    "n_overlap": 723,
    "q_value": 0.0
   },
@@ -455,8 +455,8 @@
    "metric_a": "news_immigration",
    "metric_b": "news_sanctions",
    "lag": -7,
-   "rho": 0.2655,
-   "p_value": 5.134e-13,
+   "rho": 0.2657,
+   "p_value": 4.899e-13,
    "n_overlap": 716,
    "q_value": 0.0
   },
@@ -464,8 +464,8 @@
    "metric_a": "news_interest_rates",
    "metric_b": "news_sanctions",
    "lag": 0,
-   "rho": -0.2764,
-   "p_value": 3.805e-14,
+   "rho": -0.2766,
+   "p_value": 3.624e-14,
    "n_overlap": 723,
    "q_value": 0.0
   },
@@ -474,7 +474,7 @@
    "metric_b": "news_protest",
    "lag": -7,
    "rho": -0.2154,
-   "p_value": 5.799e-09,
+   "p_value": 5.856e-09,
    "n_overlap": 716,
    "q_value": 0.0
   }
