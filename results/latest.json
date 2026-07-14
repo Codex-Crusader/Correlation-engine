@@ -29,7 +29,17 @@
   "econ_yield_spread",
   "fr_executive_orders",
   "fr_memoranda",
-  "fr_proclamations"
+  "fr_proclamations",
+  "news_ai",
+  "news_ceasefire",
+  "news_disasters",
+  "news_immigration",
+  "news_interest_rates",
+  "news_layoffs",
+  "news_outbreak",
+  "news_protest",
+  "news_sanctions",
+  "news_tariffs"
  ],
  "metrics_waiting_on_eligibility": [],
  "labels": {
@@ -81,43 +91,63 @@
   },
   {
    "id": "news_tariffs",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 1,
+   "n_points": 723
   },
   {
    "id": "news_protest",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_immigration",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_interest_rates",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_sanctions",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_ai",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 1,
+   "n_points": 723
   },
   {
    "id": "news_disasters",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_outbreak",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_ceasefire",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 0,
+   "n_points": 723
   },
   {
    "id": "news_layoffs",
-   "status": "no data"
+   "status": "ok",
+   "n_diffs": 1,
+   "n_points": 723
   },
   {
    "id": "econ_10y_yield",
@@ -198,55 +228,172 @@
    "n_points": 743
   }
  ],
- "n_pairs": 120,
- "n_tests": 1800,
- "expected_false_positives_at_p05": 90.0,
- "n_survivors_today": 25,
+ "n_pairs": 325,
+ "n_tests": 4875,
+ "expected_false_positives_at_p05": 243.8,
+ "n_survivors_today": 53,
  "runs_in_stability_window": 1,
  "stable_edges": [],
  "placebo": {
   "reps": 20,
   "survivor_counts": [
-   19,
-   31,
-   27,
-   15,
-   5,
-   33,
-   20,
-   0,
-   31,
-   32,
-   30,
-   16,
-   30,
-   35,
-   24,
-   18,
-   5,
-   16,
-   12,
-   48
+   126,
+   115,
+   162,
+   111,
+   146,
+   110,
+   115,
+   111,
+   85,
+   72,
+   77,
+   156,
+   95,
+   161,
+   81,
+   87,
+   170,
+   102,
+   161,
+   109
   ],
-  "mean_survivors": 22.35,
-  "max_survivors": 48,
+  "mean_survivors": 117.6,
+  "max_survivors": 170,
   "example_edges": [
    {
     "metric_a": "attn_executive_order",
     "metric_b": "econ_yield_spread",
+    "lag": -1,
+    "rho": 0.2339,
+    "p_value": 1.027e-07,
+    "n_overlap": 506,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "attn_executive_order",
+    "metric_b": "news_outbreak",
+    "lag": -6,
+    "rho": -0.2129,
+    "p_value": 8.711e-09,
+    "n_overlap": 716,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "attn_federal_reserve",
+    "metric_b": "econ_yield_spread",
     "lag": -3,
-    "rho": -0.2209,
-    "p_value": 5.456e-07,
+    "rho": 0.251,
+    "p_value": 1.108e-08,
     "n_overlap": 504,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "attn_federal_reserve",
+    "metric_b": "news_outbreak",
+    "lag": -7,
+    "rho": -0.2062,
+    "p_value": 2.632e-08,
+    "n_overlap": 715,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "attn_tariff",
+    "metric_b": "econ_yield_spread",
+    "lag": -5,
+    "rho": -0.3404,
+    "p_value": 4.368e-15,
+    "n_overlap": 502,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "attn_tariff",
+    "metric_b": "news_immigration",
+    "lag": -7,
+    "rho": -0.2416,
+    "p_value": 5.891e-11,
+    "n_overlap": 715,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "econ_vix",
+    "metric_b": "news_ceasefire",
+    "lag": 4,
+    "rho": 0.4274,
+    "p_value": 5.13e-24,
+    "n_overlap": 509,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "econ_vix",
+    "metric_b": "news_disasters",
+    "lag": 0,
+    "rho": 0.2443,
+    "p_value": 2.359e-08,
+    "n_overlap": 509,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "econ_yield_spread",
+    "metric_b": "news_interest_rates",
+    "lag": 6,
+    "rho": 0.3009,
+    "p_value": 9.849e-12,
+    "n_overlap": 491,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "econ_yield_spread",
+    "metric_b": "news_outbreak",
+    "lag": -5,
+    "rho": -0.2122,
+    "p_value": 2.154e-06,
+    "n_overlap": 490,
     "q_value": 0.0001
    },
    {
-    "metric_a": "attn_recession",
-    "metric_b": "econ_yield_spread",
-    "lag": -4,
-    "rho": -0.315,
-    "p_value": 4.795e-13,
-    "n_overlap": 503,
+    "metric_a": "econ_yield_spread",
+    "metric_b": "news_sanctions",
+    "lag": 7,
+    "rho": -0.2046,
+    "p_value": 4.957e-06,
+    "n_overlap": 490,
+    "q_value": 0.0002
+   },
+   {
+    "metric_a": "news_ceasefire",
+    "metric_b": "news_outbreak",
+    "lag": -7,
+    "rho": 0.2513,
+    "p_value": 8.873e-12,
+    "n_overlap": 716,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "news_disasters",
+    "metric_b": "news_interest_rates",
+    "lag": 5,
+    "rho": -0.2478,
+    "p_value": 1.662e-11,
+    "n_overlap": 718,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "news_immigration",
+    "metric_b": "news_protest",
+    "lag": 7,
+    "rho": -0.2773,
+    "p_value": 4.201e-14,
+    "n_overlap": 716,
+    "q_value": 0.0
+   },
+   {
+    "metric_a": "news_outbreak",
+    "metric_b": "news_sanctions",
+    "lag": -3,
+    "rho": -0.3615,
+    "p_value": 1.198e-23,
+    "n_overlap": 720,
     "q_value": 0.0
    }
   ]

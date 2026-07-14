@@ -56,6 +56,24 @@
    "q_value": 0.0
   },
   {
+   "metric_a": "attn_executive_order",
+   "metric_b": "news_immigration",
+   "lag": 0,
+   "rho": 0.3109,
+   "p_value": 1.198e-17,
+   "n_overlap": 722,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_executive_order",
+   "metric_b": "news_outbreak",
+   "lag": 7,
+   "rho": -0.2485,
+   "p_value": 1.53e-11,
+   "n_overlap": 716,
+   "q_value": 0.0
+  },
+  {
    "metric_a": "attn_federal_reserve",
    "metric_b": "attn_recession",
    "lag": 0,
@@ -101,6 +119,33 @@
    "q_value": 0.0
   },
   {
+   "metric_a": "attn_federal_reserve",
+   "metric_b": "news_disasters",
+   "lag": -5,
+   "rho": 0.4166,
+   "p_value": 1.79e-31,
+   "n_overlap": 717,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_federal_reserve",
+   "metric_b": "news_interest_rates",
+   "lag": 0,
+   "rho": 0.4636,
+   "p_value": 9.278e-40,
+   "n_overlap": 722,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_federal_reserve",
+   "metric_b": "news_sanctions",
+   "lag": 5,
+   "rho": -0.2805,
+   "p_value": 1.917e-14,
+   "n_overlap": 718,
+   "q_value": 0.0
+  },
+  {
    "metric_a": "attn_recession",
    "metric_b": "attn_tariff",
    "lag": 1,
@@ -137,6 +182,33 @@
    "q_value": 0.0
   },
   {
+   "metric_a": "attn_recession",
+   "metric_b": "news_interest_rates",
+   "lag": 0,
+   "rho": 0.2504,
+   "p_value": 8.812e-12,
+   "n_overlap": 722,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_recession",
+   "metric_b": "news_outbreak",
+   "lag": -5,
+   "rho": 0.2136,
+   "p_value": 7.632e-09,
+   "n_overlap": 717,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_recession",
+   "metric_b": "news_sanctions",
+   "lag": -1,
+   "rho": -0.3839,
+   "p_value": 9.897e-27,
+   "n_overlap": 721,
+   "q_value": 0.0
+  },
+  {
    "metric_a": "attn_tariff",
    "metric_b": "econ_yield_spread",
    "lag": -7,
@@ -161,6 +233,33 @@
    "rho": 0.2044,
    "p_value": 1.878e-08,
    "n_overlap": 743,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_tariff",
+   "metric_b": "news_disasters",
+   "lag": -7,
+   "rho": 0.3063,
+   "p_value": 5.421e-17,
+   "n_overlap": 715,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_tariff",
+   "metric_b": "news_outbreak",
+   "lag": 1,
+   "rho": -0.226,
+   "p_value": 8.146e-10,
+   "n_overlap": 722,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "attn_tariff",
+   "metric_b": "news_sanctions",
+   "lag": -6,
+   "rho": -0.2356,
+   "p_value": 1.734e-10,
+   "n_overlap": 716,
    "q_value": 0.0
   },
   {
@@ -200,6 +299,78 @@
    "q_value": 0.0
   },
   {
+   "metric_a": "econ_vix",
+   "metric_b": "news_disasters",
+   "lag": -7,
+   "rho": -0.2694,
+   "p_value": 7.909e-10,
+   "n_overlap": 504,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_vix",
+   "metric_b": "news_interest_rates",
+   "lag": 7,
+   "rho": -0.2114,
+   "p_value": 1.598e-06,
+   "n_overlap": 506,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_yield_spread",
+   "metric_b": "news_disasters",
+   "lag": 6,
+   "rho": -0.314,
+   "p_value": 1.076e-12,
+   "n_overlap": 491,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_yield_spread",
+   "metric_b": "news_immigration",
+   "lag": 1,
+   "rho": 0.489,
+   "p_value": 4.711e-31,
+   "n_overlap": 494,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_yield_spread",
+   "metric_b": "news_interest_rates",
+   "lag": 3,
+   "rho": -0.3176,
+   "p_value": 5.154e-13,
+   "n_overlap": 493,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_yield_spread",
+   "metric_b": "news_outbreak",
+   "lag": 1,
+   "rho": -0.3733,
+   "p_value": 8.745e-18,
+   "n_overlap": 494,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_yield_spread",
+   "metric_b": "news_protest",
+   "lag": 1,
+   "rho": 0.2586,
+   "p_value": 5.491e-09,
+   "n_overlap": 494,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "econ_yield_spread",
+   "metric_b": "news_sanctions",
+   "lag": 2,
+   "rho": 0.5324,
+   "p_value": 1.927e-37,
+   "n_overlap": 493,
+   "q_value": 0.0
+  },
+  {
    "metric_a": "fr_executive_orders",
    "metric_b": "fr_memoranda",
    "lag": 0,
@@ -224,6 +395,87 @@
    "rho": 0.2714,
    "p_value": 5.01e-14,
    "n_overlap": 744,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_ceasefire",
+   "metric_b": "news_interest_rates",
+   "lag": -5,
+   "rho": -0.2983,
+   "p_value": 3.206e-16,
+   "n_overlap": 718,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_ceasefire",
+   "metric_b": "news_sanctions",
+   "lag": 7,
+   "rho": 0.3574,
+   "p_value": 5.429e-23,
+   "n_overlap": 716,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_disasters",
+   "metric_b": "news_interest_rates",
+   "lag": 3,
+   "rho": 0.2943,
+   "p_value": 7.485e-16,
+   "n_overlap": 720,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_disasters",
+   "metric_b": "news_sanctions",
+   "lag": 7,
+   "rho": -0.3194,
+   "p_value": 1.922e-18,
+   "n_overlap": 716,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_immigration",
+   "metric_b": "news_outbreak",
+   "lag": 2,
+   "rho": -0.3435,
+   "p_value": 2.169e-21,
+   "n_overlap": 721,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_immigration",
+   "metric_b": "news_protest",
+   "lag": 0,
+   "rho": 0.3652,
+   "p_value": 3.105e-24,
+   "n_overlap": 723,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_immigration",
+   "metric_b": "news_sanctions",
+   "lag": -7,
+   "rho": 0.2655,
+   "p_value": 5.134e-13,
+   "n_overlap": 716,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_interest_rates",
+   "metric_b": "news_sanctions",
+   "lag": 0,
+   "rho": -0.2764,
+   "p_value": 3.805e-14,
+   "n_overlap": 723,
+   "q_value": 0.0
+  },
+  {
+   "metric_a": "news_outbreak",
+   "metric_b": "news_protest",
+   "lag": -7,
+   "rho": -0.2154,
+   "p_value": 5.799e-09,
+   "n_overlap": 716,
    "q_value": 0.0
   }
  ]

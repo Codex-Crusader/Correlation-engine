@@ -22,7 +22,12 @@ import pandas as pd
 from .common import PermanentAPIError, fetch_window, get_json, merge_series
 
 API_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
-CHUNK_DAYS = 180
+# One timeline call serves years of data at daily resolution (verified
+# 2026-07: a 744-day request returned daily points across the whole span),
+# so a full backfill from history_start is a single call per metric. Fewer
+# calls matter more than partial progress: exceeding GDELT's budget blocks
+# the IP for ~20 minutes, far longer than any sane retry schedule.
+CHUNK_DAYS = 1095
 SECONDS_BETWEEN_CALLS = 10  # GDELT asks for >= 5s; extra margin for shared CI IPs
 MAX_RETRIES = 5
 BASE_DELAY = 10  # waits 10/20/40/80s between attempts (capped in get_json)
@@ -69,7 +74,8 @@ def fetch_daily_share(query: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.
             if norm > 0:
                 points[date] = 100.0 * entry.get("value", 0) / norm
         chunk_start = chunk_end + pd.Timedelta(days=1)
-        time.sleep(SECONDS_BETWEEN_CALLS)
+        if chunk_start <= end:  # no point sleeping after the final chunk
+            time.sleep(SECONDS_BETWEEN_CALLS)
     return pd.Series(points).sort_index()
 
 

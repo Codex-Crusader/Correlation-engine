@@ -259,7 +259,8 @@ def main():
     }.items():
         html = html.replace(marker, value)
     OUTPUT_PATH.parent.mkdir(exist_ok=True)
-    OUTPUT_PATH.write_text(html)
+    OUTPUT_PATH.write_text(html, encoding="utf-8")  # template has non-cp1252
+                                                    # chars; locale default breaks on Windows
     print(f"wrote {OUTPUT_PATH}")
 
 

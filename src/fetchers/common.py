@@ -51,11 +51,13 @@ def get_json(url, params=None, max_retries=4, base_delay=5):
             continue
         last_status = response.status_code
         if response.status_code == 429:
-            wait = int(response.headers.get("Retry-After", base_delay * 2 ** attempt))
-            time.sleep(min(wait, 300))
+            if attempt < max_retries - 1:  # sleeping before giving up is wasted
+                wait = int(response.headers.get("Retry-After", base_delay * 2 ** attempt))
+                time.sleep(min(wait, 300))
             continue
         if response.status_code >= 500:
-            time.sleep(min(base_delay * 2 ** attempt, 120))
+            if attempt < max_retries - 1:
+                time.sleep(min(base_delay * 2 ** attempt, 120))
             continue
         response.raise_for_status()
         try:
