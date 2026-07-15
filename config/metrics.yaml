@@ -109,20 +109,28 @@ metrics:
     label: VIX volatility index
     date_added: 2026-07-13
     params: { series_id: VIXCLS }
+  # expected_lag_days: how far behind this series normally runs at the
+  # source (H.10 exchange rates are released weekly; EIA publishes WTI spot
+  # about a week late). The health table flags a metric only when it falls
+  # more than the usual 5 days behind THIS baseline, so routine publication
+  # lag does not show as a permanent false alarm.
   - id: econ_usd_eur
     source: fred
     label: USD/EUR exchange rate
     date_added: 2026-07-13
+    expected_lag_days: 7
     params: { series_id: DEXUSEU }
   - id: econ_wti_oil
     source: fred
     label: WTI crude oil price
     date_added: 2026-07-13
+    expected_lag_days: 7
     params: { series_id: DCOILWTICO }
   - id: econ_dollar_index
     source: fred
     label: Broad dollar index
     date_added: 2026-07-13
+    expected_lag_days: 7
     params: { series_id: DTWEXBGS }
 
   # ---- Wikipedia pageviews: what the public looks up ---------------------

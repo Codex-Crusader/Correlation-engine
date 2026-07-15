@@ -16,6 +16,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_PATH = ROOT / "results" / "latest.json"
 OUTPUT_PATH = ROOT / "docs" / "index.html"
+HEALTH_PATH = ROOT / "docs" / "health.json"
+
+# Sources lag naturally (markets close on weekends, the Federal Register
+# skips them, Wikimedia loads a day late), so a few days behind is normal.
+# A metric is flagged once it falls more than this many days behind its own
+# expected_lag_days baseline from the config.
+STALE_AFTER_DAYS = 5
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -65,6 +72,7 @@ th { font: 500 0.78rem "IBM Plex Mono", monospace; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--muted); }
 td.mono { font-size: 0.85rem; }
 .pos { color: var(--pos); } .neg { color: var(--neg); }
+tr.stale td { color: var(--neg); }
 .empty { color: var(--muted); font-style: italic; padding: 1.5rem 0; }
 .method { max-width: 46rem; }
 .method p { margin-top: 0.9rem; }
@@ -107,6 +115,16 @@ a { color: inherit; }
 <section>
   <h2>Published edges</h2>
   __EDGE_TABLE__
+</section>
+
+<section>
+  <h2>Data freshness</h2>
+  <p class="subtitle">The daily job succeeds if anything at all was fetched,
+  so a single source can degrade quietly. This table is where that shows;
+  rows more than __STALE_AFTER__ days behind their source's normal
+  publication lag are flagged. Machine-readable copy:
+  <a href="health.json">health.json</a>.</p>
+  __FRESHNESS_TABLE__
 </section>
 
 <section class="method">
@@ -262,6 +280,52 @@ def edge_table(summary):
     )
 
 
+def freshness_table(summary):
+    freshness = summary.get("freshness")
+    if not freshness:  # latest.json predates the freshness report
+        return '<p class="empty">Freshness data appears after the next analysis run.</p>'
+    labels = summary["labels"]
+    rows = []
+    for entry in freshness:
+        behind = entry["days_behind"]
+        allowed = entry.get("expected_lag_days", 0) + STALE_AFTER_DAYS
+        stale = behind is None or behind >= allowed
+        rows.append(
+            f"<tr{' class=\"stale\"' if stale else ''}>"
+            f"<td>{labels.get(entry['id'], entry['id'])}</td>"
+            f"<td class='mono'>{entry['source']}</td>"
+            f"<td class='mono'>{entry['last_date'] or 'never fetched'}</td>"
+            f"<td class='mono'>{'-' if behind is None else behind}</td>"
+            "</tr>"
+        )
+    return (
+        "<table><thead><tr><th>Metric</th><th>Source</th>"
+        "<th>Last observation</th><th>Days behind</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table>"
+    )
+
+
+def write_health(summary):
+    """Standalone /health.json so freshness can be checked by a script or
+    uptime monitor without parsing the page or the full latest.json."""
+    freshness = summary.get("freshness")
+    if not freshness:
+        return
+    stale = [
+        f["id"] for f in freshness
+        if f["days_behind"] is None
+        or f["days_behind"] >= f.get("expected_lag_days", 0) + STALE_AFTER_DAYS
+    ]
+    HEALTH_PATH.write_text(json.dumps({
+        "run_date": summary["run_date"],
+        "stale_after_days": STALE_AFTER_DAYS,
+        "n_metrics": len(freshness),
+        "stale_metrics": stale,
+        "metrics": freshness,
+    }, indent=1))
+    print(f"wrote {HEALTH_PATH} ({len(stale)} stale)")
+
+
 def main():
     summary = json.loads(RESULTS_PATH.read_text())
     settings = summary["settings"]
@@ -281,6 +345,8 @@ def main():
         "__STAB_MIN__": str(settings["stability_min"]),
         "__STAB_RUNS__": str(settings["stability_window"]),
         "__EDGE_TABLE__": edge_table(summary),
+        "__FRESHNESS_TABLE__": freshness_table(summary),
+        "__STALE_AFTER__": str(STALE_AFTER_DAYS),
         "__REPO_URL__": "https://github.com/Codex-Crusader/Correlation-engine",
         "__DATA_JSON__": json.dumps(summary),
     }.items():
@@ -289,6 +355,7 @@ def main():
     OUTPUT_PATH.write_text(html, encoding="utf-8")  # template has non-cp1252
                                                     # chars; locale default breaks on Windows
     print(f"wrote {OUTPUT_PATH}")
+    write_health(summary)
 
 
 if __name__ == "__main__":

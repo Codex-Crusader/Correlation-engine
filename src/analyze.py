@@ -24,7 +24,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from .fetchers.common import load_series
+from .fetchers.common import last_stored_date, load_series
 from .stats import (
     apply_correction,
     best_lag_per_pair,
@@ -79,6 +79,29 @@ def load_and_preprocess(metrics):
             {"id": metric["id"], "status": "ok", "n_diffs": n_diffs, "n_points": int(raw.notna().sum())}
         )
     return processed, prep_report
+
+
+def freshness_report(config, today):
+    """Per-metric data freshness, for the site's health table and /health.json.
+
+    Covers every configured metric, not just the eligible ones: a metric
+    waiting on its eligibility gate is still being fetched daily, and a
+    quietly dead source should be visible regardless of analysis status.
+    """
+    report = []
+    for metric in config["metrics"]:
+        last = last_stored_date(metric["id"])
+        report.append({
+            "id": metric["id"],
+            "source": metric["source"],
+            "last_date": last.isoformat() if last else None,
+            "days_behind": None if last is None else (today - last).days,
+            "expected_lag_days": metric.get("expected_lag_days", 0),
+        })
+    # Never-fetched first, then stalest: the table is a triage list, and the
+    # problem cases must not hide at the bottom.
+    report.sort(key=lambda r: (r["days_behind"] is not None, -(r["days_behind"] or 0)))
+    return report
 
 
 def edge_dict(result):
@@ -155,6 +178,7 @@ def main():
         "runs_in_stability_window": len(history),
         "stable_edges": stable_edges,
         "placebo": placebo,
+        "freshness": freshness_report(config, today),
     }
     (RESULTS_DIR / "latest.json").write_text(json.dumps(summary, indent=1))
     print(f"wrote {RESULTS_DIR / 'latest.json'}")
