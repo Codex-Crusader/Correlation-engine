@@ -8,13 +8,15 @@ breaker and cross-metric pacing.
 """
 
 import datetime
+import threading
 import time
 
 import pandas as pd
 import pytest
 import requests
 
-from src.fetch import staleness
+from src import fetch as fetch_step
+from src.fetch import fetch_lane, lane_split, staleness
 from src.fetchers import common, federal_register, fred, gdelt, wikipedia
 from src.fetchers.common import (
     PermanentAPIError,
@@ -445,3 +447,60 @@ def test_stalest_metrics_sort_first():
     metrics = [{"id": "fresh"}, {"id": "stale"}, {"id": "brand_new"}]
     ordered = [m["id"] for m in sorted(metrics, key=staleness)]
     assert ordered == ["brand_new", "stale", "fresh"]
+
+
+def test_lane_split_isolates_gdelt_and_keeps_staleness_order():
+    merge_series("g_fresh", series(["2026-07-01"], [1.0]))
+    merge_series("w_fresh", series(["2026-07-01"], [1.0]))
+    metrics = [
+        {"id": "g_fresh", "source": "gdelt"},
+        {"id": "g_new", "source": "gdelt"},
+        {"id": "w_fresh", "source": "wikipedia"},
+        {"id": "f_new", "source": "fred"},
+    ]
+    gdelt_lane, other_lane = lane_split(metrics)
+    assert [m["id"] for m in gdelt_lane] == ["g_new", "g_fresh"]
+    assert [m["id"] for m in other_lane] == ["f_new", "w_fresh"]
+
+
+def test_fetch_lane_counts_failures_without_stopping(monkeypatch):
+    monkeypatch.setitem(fetch_step.FETCHERS, "gdelt", lambda m, s: 5)
+    monkeypatch.setitem(
+        fetch_step.FETCHERS, "fred",
+        lambda m, s: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    ok, failed = fetch_lane(
+        [{"id": "a", "source": "gdelt"},
+         {"id": "b", "source": "fred"},
+         {"id": "c", "source": "gdelt"}],
+        {},
+    )
+    assert (ok, failed) == (2, 1)
+
+
+def test_lanes_actually_overlap(monkeypatch):
+    # The whole point of the lanes: the non-GDELT lane must run WHILE the
+    # GDELT lane is busy. The stub GDELT fetcher waits for the other lane's
+    # signal; under any serial execution this would time out.
+    other_lane_ran = threading.Event()
+    overlap = {}
+
+    def gdelt_stub(*_args, **_kwargs):
+        overlap["seen"] = other_lane_ran.wait(timeout=10)
+        return 1
+
+    def fred_stub(*_args, **_kwargs):
+        other_lane_ran.set()
+        return 1
+
+    monkeypatch.setitem(fetch_step.FETCHERS, "gdelt", gdelt_stub)
+    monkeypatch.setitem(fetch_step.FETCHERS, "fred", fred_stub)
+    monkeypatch.setattr(fetch_step, "load_config", lambda: {
+        "settings": {},
+        "metrics": [
+            {"id": "g", "source": "gdelt"},
+            {"id": "f", "source": "fred"},
+        ],
+    })
+    fetch_step.main()
+    assert overlap["seen"] is True
