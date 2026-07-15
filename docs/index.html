@@ -87,7 +87,7 @@ a { color: inherit; }
 
 <section>
   <h2>Published edges</h2>
-  <p class="empty">No edge passed all four filters today. That is a valid, honest result, not a malfunction.</p>
+  <p class="empty">Nothing can be published yet: an edge must recur in 10 of the last 14 daily runs, and only 1 run of history exists so far. Today's scan found 53 candidate edges now accumulating history; the first can publish after 9 more runs.</p>
 </section>
 
 <section class="method">
@@ -164,13 +164,26 @@ function drawGraph(svgId, edges) {
     svg.appendChild(label);
   });
   if (edges.length === 0) {
-    const note = el("text", {
-      x: cx, y: cy, "text-anchor": "middle", fill: "var(--muted)",
-      "font-family": "IBM Plex Mono, monospace", "font-size": "12",
+    // "Too young to publish" and "found nothing" are different states and
+    // must not look alike: an empty panel with no explanation reads as a
+    // malfunction, when the stability gate simply has not seen enough runs.
+    const warmingUp = DATA.runs_in_stability_window < DATA.settings.stability_min;
+    const lines = svgId !== "graph-real"
+      ? ["noise produced no edges today"]
+      : warmingUp
+        ? [`warming up: ${DATA.runs_in_stability_window} of ` +
+           `${DATA.settings.stability_min} runs collected`,
+           "nothing can publish yet, by design"]
+        : ["no edges passed all filters"];
+    lines.forEach((text, i) => {
+      const note = el("text", {
+        x: cx, y: cy + i * 18 - (lines.length - 1) * 9,
+        "text-anchor": "middle", fill: "var(--muted)",
+        "font-family": "IBM Plex Mono, monospace", "font-size": "12",
+      });
+      note.textContent = text;
+      svg.appendChild(note);
     });
-    note.textContent = svgId === "graph-real"
-      ? "no edges passed all filters" : "noise produced no edges today";
-    svg.appendChild(note);
   }
 }
 drawGraph("graph-real", DATA.stable_edges);

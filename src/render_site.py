@@ -183,13 +183,26 @@ function drawGraph(svgId, edges) {
     svg.appendChild(label);
   });
   if (edges.length === 0) {
-    const note = el("text", {
-      x: cx, y: cy, "text-anchor": "middle", fill: "var(--muted)",
-      "font-family": "IBM Plex Mono, monospace", "font-size": "12",
+    // "Too young to publish" and "found nothing" are different states and
+    // must not look alike: an empty panel with no explanation reads as a
+    // malfunction, when the stability gate simply has not seen enough runs.
+    const warmingUp = DATA.runs_in_stability_window < DATA.settings.stability_min;
+    const lines = svgId !== "graph-real"
+      ? ["noise produced no edges today"]
+      : warmingUp
+        ? [`warming up: ${DATA.runs_in_stability_window} of ` +
+           `${DATA.settings.stability_min} runs collected`,
+           "nothing can publish yet, by design"]
+        : ["no edges passed all filters"];
+    lines.forEach((text, i) => {
+      const note = el("text", {
+        x: cx, y: cy + i * 18 - (lines.length - 1) * 9,
+        "text-anchor": "middle", fill: "var(--muted)",
+        "font-family": "IBM Plex Mono, monospace", "font-size": "12",
+      });
+      note.textContent = text;
+      svg.appendChild(note);
     });
-    note.textContent = svgId === "graph-real"
-      ? "no edges passed all filters" : "noise produced no edges today";
-    svg.appendChild(note);
   }
 }
 drawGraph("graph-real", DATA.stable_edges);
@@ -212,6 +225,20 @@ def lag_phrase(edge, labels):
 def edge_table(summary):
     edges = summary["stable_edges"]
     if not edges:
+        runs = summary["runs_in_stability_window"]
+        need = summary["settings"]["stability_min"]
+        if runs < need:
+            # Young repo: publishing nothing is the gate working, and the
+            # page should say so instead of looking broken.
+            return (
+                '<p class="empty">Nothing can be published yet: an edge must '
+                f"recur in {need} of the last {summary['settings']['stability_window']} "
+                f"daily runs, and only "
+                f"{f'{runs} runs of history exist' if runs != 1 else '1 run of history exists'} "
+                f"so far. Today's scan found "
+                f"{summary['n_survivors_today']} candidate edges now accumulating "
+                f"history; the first can publish after {need - runs} more runs.</p>"
+            )
         return ('<p class="empty">No edge passed all four filters today. '
                 "That is a valid, honest result, not a malfunction.</p>")
     labels = summary["labels"]
