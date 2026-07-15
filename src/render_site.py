@@ -97,6 +97,7 @@ a { color: inherit; }
   <div><span class="num">≈ __EXPECTED_FP__</span><span class="lbl">hits expected from chance alone at raw p &lt; 0.05</span></div>
   <div><span class="num">__PLACEBO_MEAN__</span><span class="lbl">avg edges the same pipeline finds in pure noise (__PLACEBO_REPS__ runs)</span></div>
   <div><span class="num">__CALIBRATION__</span><span class="lbl">today's __N_SURVIVORS_TODAY__ surviving edges as a multiple of that noise average; at or below 1× chance explains everything</span></div>
+__PLACEBO_PARTIAL_CELL__
   <div><span class="num">__N_STABLE__</span><span class="lbl">edges published after FDR, effect-size, and stability filters</span></div>
 </section>
 
@@ -148,6 +149,7 @@ a { color: inherit; }
   phase-and-amplitude-matched noise, with every dependence (lags, shared
   metrics, autocorrelation, ties) priced in empirically. Until it sits well
   above 1×, the correct level of trust is none.</p>
+__COMMON_DRIVER_METHOD__
   <p><strong>Stability.</strong> A pattern that appears once is noise. Edges
   are published only after recurring, with the same sign, across most of the
   recent daily runs.</p>
@@ -246,6 +248,30 @@ def lag_phrase(edge, labels):
     return f"changes in “{leader}” precede “{follower}” by {days}d (not causal)"
 
 
+def partial_cell(edge):
+    """One table cell: the partial rho with its verdict, or why there is none.
+
+    Three verdicts under status ok: "holds" (edge survives conditioning),
+    "fades" (conditioning removed it: the common-driver flag), and
+    "weekends, not stress" (the edge was already below the floor on the
+    conditioner's trading days, so the drop is the sample, not the driver).
+    """
+    status = edge.get("partial_status")
+    if status == "ok":
+        value = f"{edge['partial_rho']:+.2f}"
+        verdict = edge.get("common_driver")
+        if verdict is True:
+            return f"<td class='mono neg'>{value} · fades</td>"
+        if verdict is False:
+            return f"<td class='mono'>{value} · holds</td>"
+        return f"<td class='mono'>{value} · weekends, not stress</td>"
+    if status == "is_conditioner":
+        return "<td class='mono'>n/a: is the control</td>"
+    if status == "insufficient_overlap":
+        return "<td class='mono'>n/a: low overlap</td>"
+    return "<td class='mono'>-</td>"
+
+
 def edge_table(summary):
     edges = summary["stable_edges"]
     if not edges:
@@ -266,6 +292,7 @@ def edge_table(summary):
         return ('<p class="empty">No edge passed all four filters today. '
                 "That is a valid, honest result, not a malfunction.</p>")
     labels = summary["labels"]
+    has_partial = bool(summary["settings"].get("conditioner"))
     rows = []
     for e in sorted(edges, key=lambda edge: -abs(edge["rho"])):
         sign_class = "pos" if e["rho"] >= 0 else "neg"
@@ -274,13 +301,16 @@ def edge_table(summary):
             f"<td>{labels.get(e['metric_a'], e['metric_a'])}</td>"
             f"<td>{labels.get(e['metric_b'], e['metric_b'])}</td>"
             f"<td class='mono {sign_class}'>{e['rho']:+.2f}</td>"
-            f"<td class='mono'>{e['q_value']:.3f}</td>"
+            + (partial_cell(e) if has_partial else "")
+            + f"<td class='mono'>{e['q_value']:.3f}</td>"
             f"<td class='mono'>{e['appearances']}/{summary['runs_in_stability_window']}</td>"
             f"<td>{lag_phrase(e, labels)}</td>"
             "</tr>"
         )
+    partial_header = "<th>ρ, stress removed</th>" if has_partial else ""
     return (
         "<table><thead><tr><th>Metric A</th><th>Metric B</th><th>ρ (changes)</th>"
+        f"{partial_header}"
         "<th>q-value</th><th>Runs seen</th><th>Timing</th></tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table>"
     )
@@ -295,6 +325,53 @@ def calibration_ratio(summary):
     if mean_noise <= 0:
         return "n/a"
     return f"{summary['n_survivors_today'] / mean_noise:.2f}×"
+
+
+def placebo_partial_cell(summary):
+    """Honesty-strip cell: how often noise edges earn the common-driver flag,
+    i.e. the flag's false-positive rate. Empty when the pipeline has no
+    conditioner yet, or when no noise edge was evaluable."""
+    fraction = summary["placebo"].get("partial_flagged_fraction")
+    if fraction is None:
+        return ""
+    return (
+        f'  <div><span class="num">{fraction:.0%}</span>'
+        '<span class="lbl">of noise edges get the “fades” (common-driver) '
+        "verdict by luck; that verdict's false-positive rate</span></div>"
+    )
+
+
+def common_driver_method(summary):
+    """Methodology paragraph for the partial-correlation annotation. Empty
+    when the summary predates the conditioner setting, so the page never
+    describes a column it does not have."""
+    conditioner = summary["settings"].get("conditioner")
+    if not conditioner:
+        return ""
+    label = summary["labels"].get(conditioner, conditioner)
+    held = summary.get("placebo", {}).get("partial_held_fraction")
+    held_note = (
+        f" In today's noise panel {held:.0%} of noise edges “held”, so treat "
+        "holding as the default outcome, not as evidence."
+        if held is not None else ""
+    )
+    return (
+        "  <p><strong>Common drivers.</strong> The likeliest reason two series "
+        "move together is that both react to the same events. Each published "
+        f"edge is therefore re-tested with changes in “{label}” conditioned "
+        "out (a partial Spearman ρ, computed only on days that series trades): "
+        "“holds” means the edge keeps its size, “fades” means conditioning "
+        "pushed it below the effect-size floor, and “weekends, not stress” "
+        "means the edge was already below the floor on trading days, so the "
+        "drop is about weekend rows, not the market. Verdicts compare the "
+        "partial ρ against the raw ρ recomputed on the same days, never "
+        "against the full-sample ρ, so a shrunken sample cannot masquerade "
+        f"as a common driver.{held_note} This is context, not a filter; the "
+        "publication gate ignores it. Nor is it a causal cleanup: market "
+        "stress is itself driven by news, so conditioning can erase genuinely "
+        "stress-mediated relationships and can occasionally manufacture "
+        "association out of nothing (collider bias).</p>"
+    )
 
 
 def freshness_table(summary):
@@ -356,6 +433,8 @@ def main():
         "__PLACEBO_MEAN__": f"{summary['placebo']['mean_survivors']:.1f}",
         "__PLACEBO_REPS__": str(summary["placebo"]["reps"]),
         "__CALIBRATION__": calibration_ratio(summary),
+        "__PLACEBO_PARTIAL_CELL__": placebo_partial_cell(summary),
+        "__COMMON_DRIVER_METHOD__": common_driver_method(summary),
         "__N_SURVIVORS_TODAY__": str(summary["n_survivors_today"]),
         "__N_STABLE__": str(len(summary["stable_edges"])),
         "__FDR_Q__": str(settings["fdr_q"]),

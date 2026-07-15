@@ -6,6 +6,8 @@ import pandas as pd
 from scipy import stats as scipy_stats
 
 from src.stats import (
+    PairResult,
+    annotate_partials,
     apply_correction,
     benjamini_hochberg,
     best_lag_per_pair,
@@ -13,6 +15,7 @@ from src.stats import (
     iaaft_surrogate,
     lagged_correlations,
     make_stationary,
+    partial_spearman,
     phase_randomize,
     preprocess,
     remove_weekday_effect,
@@ -237,6 +240,166 @@ def test_placebo_panel_on_correlated_data_reports_low_counts():
     assert panel["reps"] == 5
     assert len(panel["survivor_counts"]) == 5
     assert panel["mean_survivors"] < 2  # the real a-b link must not survive
+
+
+# ------------------------------------------------------------------- partial
+
+def test_partial_kills_common_driver_pair():
+    # Both series are the same driver plus noise: raw rho is strong, and
+    # conditioning on the driver must collapse it.
+    index = daily_index(400)
+    driver = pd.Series(RNG.normal(size=400), index=index)
+    a = driver + pd.Series(RNG.normal(scale=0.4, size=400), index=index)
+    b = driver + pd.Series(RNG.normal(scale=0.4, size=400), index=index)
+    assert scipy_stats.spearmanr(a, b)[0] > 0.6
+    rho, sample_rho, n = partial_spearman(a, b, driver, lag=0)
+    assert n == 400
+    assert abs(rho) < 0.15
+    assert sample_rho > 0.6  # same rows as the raw rho here, so it agrees
+
+
+def test_partial_preserves_direct_link():
+    # The relationship has nothing to do with the conditioner, so
+    # conditioning must leave it standing.
+    index = daily_index(400)
+    base = pd.Series(RNG.normal(size=400), index=index)
+    conditioner = pd.Series(RNG.normal(size=400), index=index)
+    a = base + pd.Series(RNG.normal(scale=0.3, size=400), index=index)
+    b = base + pd.Series(RNG.normal(scale=0.3, size=400), index=index)
+    rho, _, _ = partial_spearman(a, b, conditioner, lag=0)
+    assert rho > 0.7
+
+
+def test_partial_conditions_each_side_at_its_own_timestamp():
+    # A common driver acting at a lag: a[t] and b[t + 2] both reflect z[t].
+    # Killing it requires conditioning b on z at b's own timestamp; using
+    # only z[t] for both sides would miss it.
+    index = daily_index(400)
+    z = pd.Series(RNG.normal(size=400), index=index)
+    a = z + pd.Series(RNG.normal(scale=0.3, size=400), index=index)
+    b = z.shift(2) + pd.Series(RNG.normal(scale=0.3, size=400), index=index)
+    aligned = pd.concat([a, b.shift(-2)], axis=1).dropna()
+    assert scipy_stats.spearmanr(aligned.iloc[:, 0], aligned.iloc[:, 1])[0] > 0.6
+    rho, _, _ = partial_spearman(a, b, z, lag=2)
+    assert abs(rho) < 0.15
+
+
+def test_partial_runs_only_where_conditioner_exists():
+    # Market conditioners have no weekend values; the partial must drop
+    # those rows and report the smaller n rather than fill anything in.
+    index = daily_index(350)
+    a = pd.Series(RNG.normal(size=350), index=index)
+    b = pd.Series(RNG.normal(size=350), index=index)
+    conditioner = pd.Series(RNG.normal(size=350), index=index)
+    conditioner[index.dayofweek >= 5] = np.nan
+    _, _, n = partial_spearman(a, b, conditioner, lag=0)
+    assert n == int((index.dayofweek < 5).sum())
+
+
+def edge(metric_a, metric_b, lag=0, rho=0.5):
+    return PairResult(metric_a, metric_b, lag, rho, 0.001, 300, q_value=0.01)
+
+
+def test_annotate_partials_statuses_and_flag():
+    index = daily_index(400)
+    driver = pd.Series(RNG.normal(size=400), index=index)
+    series = {
+        "a": driver + RNG.normal(scale=0.4, size=400),
+        "b": driver + RNG.normal(scale=0.4, size=400),
+        "cond": driver,
+    }
+    edges = [edge("a", "b"), edge("a", "cond")]
+    annotate_partials(edges, series, "cond", series["cond"],
+                      min_abs_rho=0.2, min_overlap=60)
+    assert edges[0].partial_status == "ok"
+    assert edges[0].common_driver is True  # driver explained the edge...
+    sample_rho = edges[0].partial_sample_rho
+    assert sample_rho is not None and sample_rho > 0.2  # ...which held before conditioning
+    assert edges[0].partial_n == 400
+    assert edges[1].partial_status == "is_conditioner"
+    assert edges[1].partial_rho is None
+
+
+def test_annotate_partials_blames_weekends_not_the_driver():
+    # The pair agrees only on weekend rows, exactly where the conditioner
+    # is missing. On trading days the edge is below the floor before any
+    # conditioning, so the verdict must be "no verdict", not common-driver.
+    index = daily_index(700)
+    weekend = index.dayofweek >= 5
+    shared = RNG.normal(size=700)
+    a = pd.Series(RNG.normal(size=700), index=index)
+    b = pd.Series(RNG.normal(size=700), index=index)
+    a[weekend] = shared[weekend]
+    b[weekend] = shared[weekend] + RNG.normal(scale=0.1, size=int(weekend.sum()))
+    conditioner = pd.Series(RNG.normal(size=700), index=index)
+    conditioner[weekend] = np.nan
+    assert scipy_stats.spearmanr(a, b)[0] > 0.2  # full-sample edge exists
+    edges = [edge("a", "b")]
+    annotate_partials(edges, {"a": a, "b": b}, "cond", conditioner,
+                      min_abs_rho=0.2, min_overlap=60)
+    assert edges[0].partial_status == "ok"
+    sample_rho = edges[0].partial_sample_rho
+    assert sample_rho is not None and abs(sample_rho) < 0.2  # gone before conditioning
+    assert edges[0].common_driver is None
+
+
+def test_annotate_partials_without_conditioner_marks_unavailable():
+    edges = [edge("a", "b")]
+    annotate_partials(edges, {}, None, None, min_abs_rho=0.2, min_overlap=60)
+    assert edges[0].partial_status == "unavailable"
+    assert edges[0].common_driver is None
+
+
+def test_annotate_partials_low_overlap_gives_no_verdict():
+    index = daily_index(400)
+    series = {
+        "a": pd.Series(RNG.normal(size=400), index=index),
+        "b": pd.Series(RNG.normal(size=400), index=index),
+    }
+    conditioner = pd.Series(RNG.normal(size=400), index=index)
+    conditioner.iloc[100:] = np.nan  # only 100 usable days
+    edges = [edge("a", "b")]
+    annotate_partials(edges, series, "cond", conditioner,
+                      min_abs_rho=0.2, min_overlap=120)
+    assert edges[0].partial_status == "insufficient_overlap"
+    assert edges[0].partial_n == 100
+    assert edges[0].common_driver is None  # no verdict, rather than a guess
+
+
+def test_placebo_panel_reports_partial_luck_rate():
+    # Loose filters guarantee surviving noise edges, so the luck-rate
+    # fields must come back populated and internally consistent.
+    index = daily_index(300)
+    series = {
+        name: pd.Series(RNG.normal(size=300), index=index)
+        for name in ("a", "b", "c")
+    }
+    conditioner = pd.Series(RNG.normal(size=300), index=index)
+    panel = run_placebo_panel(
+        series, max_lag=2, min_overlap=100, fdr_q=1.0, min_abs_rho=0.0,
+        reps=2, seed=3, n_jobs=1,
+        conditioner_id="cond", conditioner=conditioner, partial_min_overlap=60,
+    )
+    assert panel["partial_evaluable"] > 0
+    assert (panel["partial_held"] + panel["partial_flagged"]
+            <= panel["partial_evaluable"])
+    assert panel["partial_held_fraction"] is not None
+    assert panel["partial_flagged_fraction"] is not None
+
+
+def test_placebo_panel_without_conditioner_reports_no_luck_rate():
+    index = daily_index(300)
+    series = {
+        "a": pd.Series(RNG.normal(size=300), index=index),
+        "b": pd.Series(RNG.normal(size=300), index=index),
+    }
+    panel = run_placebo_panel(
+        series, max_lag=2, min_overlap=100, fdr_q=1.0, min_abs_rho=0.0,
+        reps=2, seed=3, n_jobs=1,
+    )
+    assert panel["partial_evaluable"] == 0
+    assert panel["partial_flagged_fraction"] is None
+    assert panel["partial_held_fraction"] is None
 
 
 # ----------------------------------------------------------------- stability

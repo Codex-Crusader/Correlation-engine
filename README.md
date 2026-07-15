@@ -71,7 +71,14 @@ four filters:
 | 1 | **Stationarity** - difference until ADF passes, remove weekday cycle, Spearman on changes | spurious "two things that both trend" correlations (they correlate ~0.9 for no reason) |
 | 2 | **FDR + effect size** - Benjamini–Hochberg q < 0.05 across ALL tests, then \|ρ\| ≥ 0.20 | the ~244 free chance hits per day |
 | 3 | **Stability** - same pair, same sign, in ≥ 10 of the last 14 runs | one-day flukes (which is most survivors) |
-| 4 | **Placebo panel** - identical pipeline on phase-randomized surrogates, 20×/day | your overconfidence |
+| 4 | **Placebo panel** - identical pipeline on IAAFT surrogates, 20×/day | your overconfidence |
+
+Published edges also carry a **common-driver annotation**: a partial Spearman
+ρ with VIX changes conditioned out, labeling each edge "holds", "fades"
+(likely everything-reacting-to-the-same-crisis co-movement), or "weekends,
+not stress" (the edge lives in weekend rows the market conditioner cannot
+see). It is context, never a fifth filter, and the placebo panel measures
+its false-flag rate daily.
 
 **Zero published edges is a valid, honest result.** The site says so itself.
 

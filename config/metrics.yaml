@@ -19,6 +19,12 @@ settings:
   min_overlap: 120              # minimum overlapping observations per test
   fdr_q: 0.05                   # Benjamini-Hochberg threshold
   min_abs_rho: 0.20             # effect-size floor: tiny-but-significant is noise
+  conditioner: econ_vix         # common-driver control: published edges also
+                                # report a partial rho with this metric's
+                                # changes conditioned out (added 2026-07-15;
+                                # annotation only, never a publication gate)
+  partial_min_overlap: 60       # min conditioner-overlapping days before the
+                                # partial rho gets a common-driver verdict
   stability_window: 14          # look at the last N runs that happened
   stability_min: 10             # edge must appear (same sign) in at least N of them
   placebo_reps: 20              # surrogate universes per day

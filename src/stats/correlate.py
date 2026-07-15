@@ -30,6 +30,14 @@ class PairResult:
     p_value: float
     n_overlap: int
     q_value: float | None = None  # filled in by the BH correction step
+    # Filled in by annotate_partials (src/stats/partial.py) for edges that
+    # survive the filters. Context only: never part of the publication gate.
+    partial_rho: float | None = None
+    partial_sample_rho: float | None = None  # raw rho on the partial's own rows
+    partial_n: int | None = None
+    common_driver: bool | None = None  # True: conditioning removed the edge;
+                                       # None: no verdict (see annotate_partials)
+    partial_status: str | None = None  # ok | is_conditioner | insufficient_overlap | unavailable
 
 
 def lagged_correlations(series_by_id: dict, max_lag: int, min_overlap: int):

@@ -162,8 +162,9 @@ flowchart TD
     B --> C["3 - correlate<br>stats/correlate.py:<br>Spearman, every pair,<br>every lag -7..+7"]
     C --> D["4 - FDR correction<br>stats/correction.py:<br>Benjamini-Hochberg q-values<br>across ALL tests"]
     D --> E["5 - effect-size floor<br>drop abs(rho) &lt; min_abs_rho"]
-    E --> F["6 - placebo panel<br>stats/placebo.py:<br>same steps 3-5 on<br>phase-randomized surrogates,<br>placebo_reps times"]
-    F --> G["7 - stability<br>stats/stability.py:<br>append today's survivors to history,<br>publish only edges seen in<br>&ge; stability_min of last stability_window runs"]
+    E --> P["6 - common-driver annotation<br>stats/partial.py:<br>partial Spearman vs conditioner<br>changes, per survivor<br>(context, never a gate)"]
+    P --> F["7 - placebo panel<br>stats/placebo.py:<br>same steps 3-6 on<br>IAAFT surrogates,<br>placebo_reps times"]
+    F --> G["8 - stability<br>stats/stability.py:<br>append today's survivors to history,<br>publish only edges seen in<br>&ge; stability_min of last stability_window runs"]
     G --> H["results/latest.json +<br>results/history/edges_&lt;date&gt;.json"]
 ```
 
@@ -185,13 +186,26 @@ Step notes that matter when reading the code:
 - **Correction (4):** BH q-values are approximate here because a pair's 15
   lags are positively dependent, not independent - one reason the placebo
   panel exists at all.
-- **Placebo (6):** surrogates are FFT phase randomizations: same power
-  spectrum (so same autocorrelation and "wiggliness"), all real
-  cross-series relationships destroyed. NaN patterns are preserved so
-  surrogates face the same overlap constraints. Chosen over shuffling
-  because shuffling kills autocorrelation and makes noise look tamer than
-  it is.
-- **Stability (7):** an edge's identity is `sorted(pair) + sign(rho)`
+- **Common-driver annotation (6):** each survivor gets a partial Spearman
+  rho with the conditioner's changes removed, conditioning `a[t]` and
+  `b[t + k]` each at its own timestamp. The verdict compares the partial
+  against the raw rho recomputed on the same rows (the conditioner has no
+  weekend values), so a shrunken sample cannot masquerade as a common
+  driver: "fades" means the conditioning removed the edge, "weekends, not
+  stress" means the edge was gone on trading days before conditioning.
+  Pairs touching the conditioner itself get no verdict. Never a filter;
+  the placebo panel measures how often noise earns each verdict.
+- **Placebo (7):** surrogates are IAAFT (iterative amplitude-adjusted
+  Fourier transform): exactly the original marginal distribution (ties
+  and zero-inflation included), approximately the original power spectrum
+  (so autocorrelation and "wiggliness"), all real cross-series
+  relationships destroyed. NaN patterns are preserved so surrogates face
+  the same overlap constraints. Chosen over shuffling because shuffling
+  kills autocorrelation and makes noise look tamer than it is. Surrogate
+  survivors are conditioned on the *real* conditioner series, which they
+  are independent of by construction - that is what makes the reported
+  verdict rates honest baselines.
+- **Stability (8):** an edge's identity is `sorted(pair) + sign(rho)`
   (`stability.edge_key`), so a correlation that flips sign does not count
   as recurring. `best_lag_per_pair` collapses a pair's surviving lags to
   the strongest one - *after* correction, so it is display-only and cannot
@@ -220,6 +234,8 @@ placebo baseline) renders before any result.
 | `min_overlap` | `120` | Minimum overlapping observations for a (pair, lag) test | Below ~120 daily points, Spearman p-values get flaky |
 | `fdr_q` | `0.05` | Benjamini–Hochberg threshold | The headline false-discovery budget |
 | `min_abs_rho` | `0.20` | Effect-size floor after correction | Filters tiny-but-significant correlations that mean nothing |
+| `conditioner` | `econ_vix` | Survivors also report a partial rho with this metric's changes conditioned out | Annotation only, never gates publication; changing it changes which common driver the verdicts speak about |
+| `partial_min_overlap` | `60` | Minimum conditioner-overlapping days before a partial verdict | Below this the site shows "low overlap" instead of guessing |
 | `stability_window` | `14` | Look at the last N runs *that happened* | Counting runs, not days, makes skipped crons harmless |
 | `stability_min` | `10` | Edge must appear (same sign) in at least N of those runs | The main gate between "survived today" and "published" |
 | `placebo_reps` | `20` | Surrogate universes per day | More reps = smoother noise baseline, linearly slower analysis |

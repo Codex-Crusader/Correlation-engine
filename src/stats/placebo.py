@@ -27,6 +27,7 @@ import pandas as pd
 
 from .correction import apply_correction
 from .correlate import lagged_correlations
+from .partial import annotate_partials
 
 
 def phase_randomize(values: np.ndarray, rng: np.random.Generator) -> np.ndarray:
@@ -86,7 +87,8 @@ def surrogate_series(series: pd.Series, rng: np.random.Generator) -> pd.Series:
 def _run_one_rep(args):
     """One surrogate universe through steps 3-5. Top-level (not nested) so
     multiprocessing can pickle it under the spawn start method."""
-    series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho, child_seed = args
+    (series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
+     conditioner_id, conditioner, partial_min_overlap, child_seed) = args
     rng = np.random.default_rng(child_seed)
     surrogates = {
         name: surrogate_series(series, rng)
@@ -94,14 +96,22 @@ def _run_one_rep(args):
     }
     results, _ = lagged_correlations(surrogates, max_lag, min_overlap)
     apply_correction(results)
-    return [
+    survivors = [
         r for r in results
         if r.q_value < fdr_q and abs(r.rho) >= min_abs_rho
     ]
+    if conditioner is not None:
+        # Condition surrogate edges on the REAL conditioner: surrogates are
+        # independent of it by construction, so whatever fraction still
+        # clears the floor is the luck rate for "survives conditioning".
+        annotate_partials(survivors, surrogates, conditioner_id, conditioner,
+                          min_abs_rho, partial_min_overlap)
+    return survivors
 
 
 def run_placebo_panel(series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
-                      reps, seed=None, n_jobs=None):
+                      reps, seed=None, n_jobs=None, conditioner_id=None,
+                      conditioner=None, partial_min_overlap=0):
     """Run the real pipeline `reps` times on surrogate universes, in parallel.
 
     Reps are independent by construction, so they fan out over a process
@@ -113,10 +123,19 @@ def run_placebo_panel(series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
     Returns a dict with the per-rep counts of edges that survive the same
     q-value and effect-size filters the real analysis uses, plus the edges
     from the first rep so the site can draw an example noise graph.
+
+    When a conditioner is given, each rep's surviving noise edges also get
+    the partial-correlation annotation, and the returned dict reports how
+    the verdicts distribute over noise. Noise is independent of the real
+    conditioner by construction, so any common-driver flag it earns is
+    luck: partial_flagged_fraction is the flag's false-positive rate, and
+    partial_held_fraction says how cheap the "holds" outcome is (measured
+    ~0.94 on this pool, so holding is close to the default, not evidence).
     """
     child_seeds = np.random.SeedSequence(seed).spawn(reps)
     jobs = [
-        (series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho, child_seed)
+        (series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
+         conditioner_id, conditioner, partial_min_overlap, child_seed)
         for child_seed in child_seeds
     ]
     if n_jobs is None:
@@ -127,10 +146,22 @@ def run_placebo_panel(series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
     else:
         survivors_per_rep = [_run_one_rep(job) for job in jobs]
     survivor_counts = [len(survivors) for survivors in survivors_per_rep]
+    evaluable = [
+        r for rep in survivors_per_rep for r in rep if r.partial_status == "ok"
+    ]
+    held = sum(r.common_driver is False for r in evaluable)
+    flagged = sum(r.common_driver is True for r in evaluable)
     return {
         "reps": reps,
         "survivor_counts": survivor_counts,
         "mean_survivors": float(np.mean(survivor_counts)),
         "max_survivors": int(np.max(survivor_counts)),
         "example_edges": survivors_per_rep[0],
+        "partial_evaluable": len(evaluable),
+        "partial_held": int(held),
+        "partial_flagged": int(flagged),
+        "partial_held_fraction":
+            round(held / len(evaluable), 3) if evaluable else None,
+        "partial_flagged_fraction":
+            round(flagged / len(evaluable), 3) if evaluable else None,
     }

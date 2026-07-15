@@ -8,8 +8,11 @@ Pipeline, in order, with nothing skippable:
   3. Spearman correlation for every pair at every lag in the window.
   4. Benjamini-Hochberg FDR correction across ALL tests.
   5. Effect-size floor.
-  6. Placebo panel: the same steps 3-5 on phase-randomized surrogates.
-  7. Stability: today's survivors are appended to history; only edges seen
+  6. Common-driver annotation: each survivor gets a partial Spearman rho
+     with the market-stress conditioner removed. Context only; it never
+     gates publication.
+  7. Placebo panel: the same steps 3-6 on phase-randomized surrogates.
+  8. Stability: today's survivors are appended to history; only edges seen
      in enough recent runs are published.
 
 Output: results/history/edges_<date>.json (one per run, the audit trail)
@@ -26,6 +29,7 @@ import yaml
 
 from .fetchers.common import last_stored_date, load_series
 from .stats import (
+    annotate_partials,
     apply_correction,
     best_lag_per_pair,
     edge_key,
@@ -109,6 +113,9 @@ def edge_dict(result):
     record["rho"] = round(record["rho"], 4)
     record["p_value"] = float(f"{record['p_value']:.3e}")
     record["q_value"] = round(record["q_value"], 4)
+    for field in ("partial_rho", "partial_sample_rho"):
+        if record[field] is not None:
+            record[field] = round(record[field], 4)
     return record
 
 
@@ -134,7 +141,18 @@ def main():
     survivors = best_lag_per_pair(survivors)
     print(f"{n_tests} tests, {len(survivors)} pairs survive FDR and effect-size filters")
 
-    # Step 6: what does pure noise produce under the identical pipeline?
+    # Step 6: which survivors are just everything-reacts-to-the-same-crisis?
+    conditioner_id = settings.get("conditioner")
+    conditioner = series_by_id.get(conditioner_id) if conditioner_id else None
+    annotate_partials(
+        survivors, series_by_id, conditioner_id, conditioner,
+        settings["min_abs_rho"], settings.get("partial_min_overlap", 0),
+    )
+    n_flagged = sum(1 for r in survivors if r.common_driver)
+    print(f"common-driver check vs {conditioner_id}: "
+          f"{n_flagged} of {len(survivors)} survivors fade after conditioning")
+
+    # Step 7: what does pure noise produce under the identical pipeline?
     placebo = run_placebo_panel(
         series_by_id,
         settings["max_lag_days"],
@@ -142,11 +160,14 @@ def main():
         settings["fdr_q"],
         settings["min_abs_rho"],
         settings["placebo_reps"],
+        conditioner_id=conditioner_id,
+        conditioner=conditioner,
+        partial_min_overlap=settings.get("partial_min_overlap", 0),
     )
     placebo["example_edges"] = [edge_dict(r) for r in best_lag_per_pair(placebo["example_edges"])]
     print(f"placebo: mean {placebo['mean_survivors']:.1f} edges across {placebo['reps']} noise universes")
 
-    # Step 7: append today's survivors to history, then apply stability.
+    # Step 8: append today's survivors to history, then apply stability.
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
     history_file = HISTORY_DIR / f"edges_{today.isoformat()}.json"
     history_file.write_text(json.dumps(
