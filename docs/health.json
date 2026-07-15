@@ -40,13 +40,6 @@
    "expected_lag_days": 0
   },
   {
-   "id": "attn_recession",
-   "source": "wikipedia",
-   "last_date": "2026-07-13",
-   "days_behind": 2,
-   "expected_lag_days": 0
-  },
-  {
    "id": "econ_yield_spread",
    "source": "fred",
    "last_date": "2026-07-14",
@@ -55,6 +48,13 @@
   },
   {
    "id": "attn_inflation",
+   "source": "wikipedia",
+   "last_date": "2026-07-14",
+   "days_behind": 1,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "attn_recession",
    "source": "wikipedia",
    "last_date": "2026-07-14",
    "days_behind": 1,
