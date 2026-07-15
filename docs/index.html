@@ -70,6 +70,7 @@ a { color: inherit; }
   <div><span class="num">4,875</span><span class="lbl">hypothesis tests run today (pairs × lags)</span></div>
   <div><span class="num">≈ 243.8</span><span class="lbl">hits expected from chance alone at raw p &lt; 0.05</span></div>
   <div><span class="num">202.1</span><span class="lbl">avg edges the same pipeline finds in pure noise (20 runs)</span></div>
+  <div><span class="num">0.26×</span><span class="lbl">today's 53 surviving edges as a multiple of that noise average; at or below 1× chance explains everything</span></div>
   <div><span class="num">0</span><span class="lbl">edges published after FDR, effect-size, and stability filters</span></div>
 </section>
 
@@ -115,7 +116,12 @@ a { color: inherit; }
   guarantees chance hits; the strip above says how many. Benjamini–Hochberg
   correction bounds the expected false-discovery share at 5%.
   The lags of a single pair are not independent tests, so treat q-values as
-  approximate - which is what the noise panel is for.</p>
+  approximate - which is what the noise panel is for. The calibration number
+  in the strip above makes that comparison daily and quantitative: today's
+  surviving edges as a multiple of what the identical pipeline averages on
+  phase-and-amplitude-matched noise, with every dependence (lags, shared
+  metrics, autocorrelation, ties) priced in empirically. Until it sits well
+  above 1×, the correct level of trust is none.</p>
   <p><strong>Stability.</strong> A pattern that appears once is noise. Edges
   are published only after recurring, with the same sign, across most of the
   recent daily runs.</p>

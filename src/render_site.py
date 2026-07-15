@@ -96,6 +96,7 @@ a { color: inherit; }
   <div><span class="num">__N_TESTS__</span><span class="lbl">hypothesis tests run today (pairs × lags)</span></div>
   <div><span class="num">≈ __EXPECTED_FP__</span><span class="lbl">hits expected from chance alone at raw p &lt; 0.05</span></div>
   <div><span class="num">__PLACEBO_MEAN__</span><span class="lbl">avg edges the same pipeline finds in pure noise (__PLACEBO_REPS__ runs)</span></div>
+  <div><span class="num">__CALIBRATION__</span><span class="lbl">today's __N_SURVIVORS_TODAY__ surviving edges as a multiple of that noise average; at or below 1× chance explains everything</span></div>
   <div><span class="num">__N_STABLE__</span><span class="lbl">edges published after FDR, effect-size, and stability filters</span></div>
 </section>
 
@@ -141,7 +142,12 @@ a { color: inherit; }
   guarantees chance hits; the strip above says how many. Benjamini–Hochberg
   correction bounds the expected false-discovery share at __FDR_Q_PCT__%.
   The lags of a single pair are not independent tests, so treat q-values as
-  approximate - which is what the noise panel is for.</p>
+  approximate - which is what the noise panel is for. The calibration number
+  in the strip above makes that comparison daily and quantitative: today's
+  surviving edges as a multiple of what the identical pipeline averages on
+  phase-and-amplitude-matched noise, with every dependence (lags, shared
+  metrics, autocorrelation, ties) priced in empirically. Until it sits well
+  above 1×, the correct level of trust is none.</p>
   <p><strong>Stability.</strong> A pattern that appears once is noise. Edges
   are published only after recurring, with the same sign, across most of the
   recent daily runs.</p>
@@ -280,6 +286,17 @@ def edge_table(summary):
     )
 
 
+def calibration_ratio(summary):
+    """Today's FDR survivors as a multiple of the placebo average: the one
+    number that says whether today's crop beats pure noise. The placebo mean
+    can only be zero on a tiny or degenerate pool; there is no honest ratio
+    to print then."""
+    mean_noise = summary["placebo"]["mean_survivors"]
+    if mean_noise <= 0:
+        return "n/a"
+    return f"{summary['n_survivors_today'] / mean_noise:.2f}×"
+
+
 def freshness_table(summary):
     freshness = summary.get("freshness")
     if not freshness:  # latest.json predates the freshness report
@@ -338,6 +355,8 @@ def main():
         "__EXPECTED_FP__": str(summary["expected_false_positives_at_p05"]),
         "__PLACEBO_MEAN__": f"{summary['placebo']['mean_survivors']:.1f}",
         "__PLACEBO_REPS__": str(summary["placebo"]["reps"]),
+        "__CALIBRATION__": calibration_ratio(summary),
+        "__N_SURVIVORS_TODAY__": str(summary["n_survivors_today"]),
         "__N_STABLE__": str(len(summary["stable_edges"])),
         "__FDR_Q__": str(settings["fdr_q"]),
         "__FDR_Q_PCT__": str(round(settings["fdr_q"] * 100)),
