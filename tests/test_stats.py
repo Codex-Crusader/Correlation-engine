@@ -10,6 +10,7 @@ from src.stats import (
     benjamini_hochberg,
     best_lag_per_pair,
     edge_key,
+    iaaft_surrogate,
     lagged_correlations,
     make_stationary,
     phase_randomize,
@@ -152,6 +153,63 @@ def test_phase_randomization_preserves_power_spectrum():
     original_power = np.abs(np.fft.rfft(values))
     surrogate_power = np.abs(np.fft.rfft(surrogate))
     assert np.allclose(original_power, surrogate_power, rtol=1e-8)
+
+
+def ar1(n=500, phi=0.8, seed_noise=None):
+    values = np.empty(n)
+    values[0] = 0.0
+    noise = RNG.normal(size=n) if seed_noise is None else seed_noise
+    for i in range(1, n):
+        values[i] = phi * values[i - 1] + noise[i]
+    return values
+
+
+def spectrum_rel_error(original, surrogate):
+    a = np.abs(np.fft.rfft(original))
+    b = np.abs(np.fft.rfft(surrogate))
+    return np.linalg.norm(a - b) / np.linalg.norm(a)
+
+
+def test_iaaft_preserves_power_spectrum_closely():
+    # On continuous data IAAFT converges tightly (measured ~0.01 relative
+    # error on real series); 0.05 leaves headroom without letting a broken
+    # implementation through (a shuffle scores ~0.9 here).
+    values = ar1()
+    surrogate = iaaft_surrogate(values, np.random.default_rng(0))
+    assert spectrum_rel_error(values, surrogate) < 0.05
+
+
+def test_iaaft_spectrum_survives_heavy_ties():
+    # Zero-inflation caps how well any value-preserving surrogate can match
+    # the spectrum (measured ~0.23 on the real executive-orders series), but
+    # IAAFT must stay far ahead of a plain shuffle on the same data.
+    rng = np.random.default_rng(0)
+    values = np.where(rng.uniform(size=600) < 0.4, 0.0,
+                      ar1(600, seed_noise=rng.normal(size=600)))
+    surrogate = iaaft_surrogate(values, np.random.default_rng(1))
+    shuffled = rng.permutation(values)
+    assert spectrum_rel_error(values, surrogate) < 0.5 * spectrum_rel_error(values, shuffled)
+
+
+def test_iaaft_preserves_marginals_exactly():
+    # Zero-inflated and spiky, like the real document counts: the surrogate
+    # must be a permutation of the observed values, ties and all.
+    values = np.where(RNG.uniform(size=400) < 0.7, 0.0, RNG.exponential(5, 400))
+    surrogate = iaaft_surrogate(values, np.random.default_rng(0))
+    assert np.array_equal(np.sort(surrogate), np.sort(values))
+    assert not np.array_equal(surrogate, values)  # and not the identity
+
+
+def test_iaaft_approximately_preserves_autocorrelation():
+    # AR(1) with strong persistence; the surrogate must stay comparably
+    # persistent, or the null would be too easy (the shuffling failure mode).
+    values = ar1()
+    surrogate = iaaft_surrogate(values, np.random.default_rng(0))
+
+    def lag1_autocorr(x):
+        return np.corrcoef(x[:-1], x[1:])[0, 1]
+
+    assert abs(lag1_autocorr(surrogate) - lag1_autocorr(values)) < 0.15
 
 
 def test_surrogate_preserves_missing_data_pattern():

@@ -1,12 +1,18 @@
 """Placebo panel: run the identical pipeline on data that contains no
 real relationships, and show what it finds.
 
-Method: phase randomization. Each series is passed through an FFT, its phases
-are replaced with uniform random ones, and it is transformed back. The
-surrogate keeps the original's power spectrum, and therefore its
-autocorrelation ("wiggliness"), but any real relationship between two series
-is destroyed. This is a stricter, more honest null than shuffling, which
-kills autocorrelation and makes noise look tamer than it really is.
+Method: IAAFT surrogates (iterative amplitude-adjusted Fourier transform).
+Plain phase randomization keeps the power spectrum, and therefore the
+autocorrelation ("wiggliness"), but pushes the values toward Gaussian, and
+these series are anything but: document counts are zero-inflated, coverage
+shares and pageviews are spiky. That matters for a rank-based statistic,
+because zero-inflation means ties. IAAFT alternates between imposing the
+original amplitude spectrum and rank-remapping back onto the original
+values, so the surrogate keeps BOTH the exact marginal distribution (it is
+a permutation of the observed values, ties included) and, approximately,
+the autocorrelation, while any real relationship between two series is
+destroyed. Either alone is a weaker null: shuffling kills autocorrelation,
+phase randomization alone kills the marginals.
 
 Whatever count of "significant" edges the placebo runs produce is the
 baseline the real findings must be judged against, and the site shows it
@@ -34,8 +40,35 @@ def phase_randomize(values: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return np.fft.irfft(spectrum * phases, n=n)
 
 
+def iaaft_surrogate(values: np.ndarray, rng: np.random.Generator,
+                    max_iter: int = 100) -> np.ndarray:
+    """IAAFT surrogate: exact marginal distribution, approximate spectrum.
+
+    Starting from a random permutation of the values, alternate between
+    (a) imposing the original amplitude spectrum while keeping the current
+    phases and (b) rank-remapping onto the sorted original values. Stops
+    when the rank ordering fixes itself, which typically takes well under
+    max_iter sweeps. The last step is always (b), so the result is exactly
+    a permutation of the input.
+    """
+    sorted_values = np.sort(values)
+    target_amplitudes = np.abs(np.fft.rfft(values))
+    current = rng.permutation(values)
+    previous_ranks = None
+    for _ in range(max_iter):
+        phases = np.angle(np.fft.rfft(current))
+        current = np.fft.irfft(target_amplitudes * np.exp(1j * phases),
+                               n=len(values))
+        ranks = np.argsort(np.argsort(current))
+        current = sorted_values[ranks]
+        if previous_ranks is not None and np.array_equal(ranks, previous_ranks):
+            break
+        previous_ranks = ranks
+    return current
+
+
 def surrogate_series(series: pd.Series, rng: np.random.Generator) -> pd.Series:
-    """Phase-randomized copy of a series, preserving its missing-data pattern.
+    """IAAFT surrogate of a series, preserving its missing-data pattern.
 
     NaNs are linearly interpolated for the FFT only, then punched back out,
     so the surrogate faces the same overlap constraints as the original.
@@ -44,7 +77,7 @@ def surrogate_series(series: pd.Series, rng: np.random.Generator) -> pd.Series:
     filled = series.interpolate(limit_direction="both")
     if filled.isna().any():  # series was entirely NaN
         return series.copy()
-    surrogate_values = phase_randomize(filled.to_numpy(), rng)
+    surrogate_values = iaaft_surrogate(filled.to_numpy(), rng)
     surrogate = pd.Series(surrogate_values, index=series.index)
     surrogate[missing] = np.nan
     return surrogate
