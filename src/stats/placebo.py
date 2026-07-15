@@ -13,6 +13,9 @@ baseline the real findings must be judged against, and the site shows it
 with the same visual weight as the real result.
 """
 
+import os
+from multiprocessing import Pool
+
 import numpy as np
 import pandas as pd
 
@@ -47,35 +50,54 @@ def surrogate_series(series: pd.Series, rng: np.random.Generator) -> pd.Series:
     return surrogate
 
 
+def _run_one_rep(args):
+    """One surrogate universe through steps 3-5. Top-level (not nested) so
+    multiprocessing can pickle it under the spawn start method."""
+    series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho, child_seed = args
+    rng = np.random.default_rng(child_seed)
+    surrogates = {
+        name: surrogate_series(series, rng)
+        for name, series in series_by_id.items()
+    }
+    results, _ = lagged_correlations(surrogates, max_lag, min_overlap)
+    apply_correction(results)
+    return [
+        r for r in results
+        if r.q_value < fdr_q and abs(r.rho) >= min_abs_rho
+    ]
+
+
 def run_placebo_panel(series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
-                      reps, seed=None):
-    """Run the real pipeline `reps` times on surrogate universes.
+                      reps, seed=None, n_jobs=None):
+    """Run the real pipeline `reps` times on surrogate universes, in parallel.
+
+    Reps are independent by construction, so they fan out over a process
+    pool (n_jobs defaults to one worker per core, capped at reps). Each rep
+    draws from its own SeedSequence-spawned stream rather than sharing one
+    generator, which makes a seeded panel reproducible bit-for-bit at any
+    worker count -- including n_jobs=1, which skips the pool entirely.
 
     Returns a dict with the per-rep counts of edges that survive the same
     q-value and effect-size filters the real analysis uses, plus the edges
     from the first rep so the site can draw an example noise graph.
     """
-    rng = np.random.default_rng(seed)
-    survivor_counts = []
-    example_edges = []
-    for rep in range(reps):
-        surrogates = {
-            name: surrogate_series(series, rng)
-            for name, series in series_by_id.items()
-        }
-        results, _ = lagged_correlations(surrogates, max_lag, min_overlap)
-        apply_correction(results)
-        survivors = [
-            r for r in results
-            if r.q_value < fdr_q and abs(r.rho) >= min_abs_rho
-        ]
-        survivor_counts.append(len(survivors))
-        if rep == 0:
-            example_edges = survivors
+    child_seeds = np.random.SeedSequence(seed).spawn(reps)
+    jobs = [
+        (series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho, child_seed)
+        for child_seed in child_seeds
+    ]
+    if n_jobs is None:
+        n_jobs = min(reps, os.cpu_count() or 1)
+    if n_jobs > 1:
+        with Pool(n_jobs) as pool:
+            survivors_per_rep = pool.map(_run_one_rep, jobs)
+    else:
+        survivors_per_rep = [_run_one_rep(job) for job in jobs]
+    survivor_counts = [len(survivors) for survivors in survivors_per_rep]
     return {
         "reps": reps,
         "survivor_counts": survivor_counts,
         "mean_survivors": float(np.mean(survivor_counts)),
         "max_survivors": int(np.max(survivor_counts)),
-        "example_edges": example_edges,
+        "example_edges": survivors_per_rep[0],
     }
