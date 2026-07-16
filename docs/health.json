@@ -40,55 +40,6 @@
    "expected_lag_days": 0
   },
   {
-   "id": "attn_recession",
-   "source": "wikipedia",
-   "last_date": "2026-07-14",
-   "days_behind": 2,
-   "expected_lag_days": 0
-  },
-  {
-   "id": "news_interest_rates",
-   "source": "gdelt",
-   "last_date": "2026-07-15",
-   "days_behind": 1,
-   "expected_lag_days": 0
-  },
-  {
-   "id": "news_sanctions",
-   "source": "gdelt",
-   "last_date": "2026-07-15",
-   "days_behind": 1,
-   "expected_lag_days": 0
-  },
-  {
-   "id": "news_ai",
-   "source": "gdelt",
-   "last_date": "2026-07-15",
-   "days_behind": 1,
-   "expected_lag_days": 0
-  },
-  {
-   "id": "news_disasters",
-   "source": "gdelt",
-   "last_date": "2026-07-15",
-   "days_behind": 1,
-   "expected_lag_days": 0
-  },
-  {
-   "id": "news_outbreak",
-   "source": "gdelt",
-   "last_date": "2026-07-15",
-   "days_behind": 1,
-   "expected_lag_days": 0
-  },
-  {
-   "id": "news_ceasefire",
-   "source": "gdelt",
-   "last_date": "2026-07-15",
-   "days_behind": 1,
-   "expected_lag_days": 0
-  },
-  {
    "id": "news_layoffs",
    "source": "gdelt",
    "last_date": "2026-07-15",
@@ -104,6 +55,13 @@
   },
   {
    "id": "attn_inflation",
+   "source": "wikipedia",
+   "last_date": "2026-07-15",
+   "days_behind": 1,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "attn_recession",
    "source": "wikipedia",
    "last_date": "2026-07-15",
    "days_behind": 1,
@@ -181,6 +139,48 @@
   },
   {
    "id": "news_immigration",
+   "source": "gdelt",
+   "last_date": "2026-07-16",
+   "days_behind": 0,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "news_interest_rates",
+   "source": "gdelt",
+   "last_date": "2026-07-16",
+   "days_behind": 0,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "news_sanctions",
+   "source": "gdelt",
+   "last_date": "2026-07-16",
+   "days_behind": 0,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "news_ai",
+   "source": "gdelt",
+   "last_date": "2026-07-16",
+   "days_behind": 0,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "news_disasters",
+   "source": "gdelt",
+   "last_date": "2026-07-16",
+   "days_behind": 0,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "news_outbreak",
+   "source": "gdelt",
+   "last_date": "2026-07-16",
+   "days_behind": 0,
+   "expected_lag_days": 0
+  },
+  {
+   "id": "news_ceasefire",
    "source": "gdelt",
    "last_date": "2026-07-16",
    "days_behind": 0,
