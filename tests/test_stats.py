@@ -16,7 +16,6 @@ from src.stats import (
     lagged_correlations,
     make_stationary,
     partial_spearman,
-    phase_randomize,
     preprocess,
     remove_weekday_effect,
     run_placebo_panel,
@@ -148,15 +147,6 @@ def test_bh_on_pure_noise_rejects_almost_nothing():
 
 
 # ------------------------------------------------------------------- placebo
-
-def test_phase_randomization_preserves_power_spectrum():
-    values = RNG.normal(size=500).cumsum()
-    surrogate = phase_randomize(values, RNG)
-    assert len(surrogate) == len(values)
-    original_power = np.abs(np.fft.rfft(values))
-    surrogate_power = np.abs(np.fft.rfft(surrogate))
-    assert np.allclose(original_power, surrogate_power, rtol=1e-8)
-
 
 def ar1(n=500, phi=0.8, seed_noise=None):
     values = np.empty(n)
@@ -385,6 +375,48 @@ def test_placebo_panel_reports_partial_luck_rate():
             <= panel["partial_evaluable"])
     assert panel["partial_held_fraction"] is not None
     assert panel["partial_flagged_fraction"] is not None
+
+
+def test_placebo_counts_are_pairs_not_pair_lags():
+    # Regression test for the calibration-ratio bug (fixed 2026-07-16): the
+    # real path collapses survivors to one edge per pair, and the placebo
+    # counts must be in the same unit or the site's ratio compares pairs to
+    # pair-lags. Slow sinusoids are the adversarial case: their surrogates
+    # keep the smoothness, so spurious edges survive at MANY adjacent lags
+    # (measured 15-25 uncollapsed survivors per rep on this data, against
+    # only 3 possible pairs).
+    index = daily_index(400)
+    t = np.arange(400)
+    rng = np.random.default_rng(0)
+    series = {
+        "a": pd.Series(np.sin(t / 10) + rng.normal(scale=0.3, size=400), index=index),
+        "b": pd.Series(np.sin(t / 9) + rng.normal(scale=0.3, size=400), index=index),
+        "c": pd.Series(np.sin(t / 11) + rng.normal(scale=0.3, size=400), index=index),
+    }
+    panel = run_placebo_panel(
+        series, max_lag=7, min_overlap=100, fdr_q=0.05,
+        min_abs_rho=0.2, reps=3, seed=11, n_jobs=1,
+    )
+    n_pairs = 3
+    assert all(count <= n_pairs for count in panel["survivor_counts"])
+    pairs = [(e.metric_a, e.metric_b) for e in panel["example_edges"]]
+    assert len(pairs) == len(set(pairs))  # one edge per pair
+    assert len(pairs) == panel["survivor_counts"][0]
+
+
+def test_placebo_panel_is_reproducible_when_seeded():
+    # The committed noise baseline must be recomputable from the audit
+    # trail: same seed, same counts, regardless of worker count.
+    index = daily_index(300)
+    series = {
+        name: pd.Series(RNG.normal(size=300), index=index)
+        for name in ("a", "b", "c")
+    }
+    kwargs = dict(max_lag=2, min_overlap=100, fdr_q=1.0, min_abs_rho=0.0,
+                  reps=2, seed=99)
+    first = run_placebo_panel(series, n_jobs=1, **kwargs)
+    second = run_placebo_panel(series, n_jobs=2, **kwargs)
+    assert first["survivor_counts"] == second["survivor_counts"]
 
 
 def test_placebo_panel_without_conditioner_reports_no_luck_rate():

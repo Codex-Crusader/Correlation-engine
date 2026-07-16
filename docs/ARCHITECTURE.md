@@ -202,9 +202,14 @@ Step notes that matter when reading the code:
   relationships destroyed. NaN patterns are preserved so surrogates face
   the same overlap constraints. Chosen over shuffling because shuffling
   kills autocorrelation and makes noise look tamer than it is. Surrogate
-  survivors are conditioned on the *real* conditioner series, which they
-  are independent of by construction - that is what makes the reported
-  verdict rates honest baselines.
+  survivors are collapsed to one edge per pair (`best_lag_per_pair`)
+  before counting, exactly as the real path does, so `mean_survivors` and
+  `n_survivors_today` are in the same unit and their ratio - the site's
+  calibration number - compares like with like. Surrogate survivors are
+  conditioned on the *real* conditioner series, which they are independent
+  of by construction - that is what makes the reported verdict rates
+  honest baselines. The panel is seeded with the run date: reproducible
+  from the audit trail, fresh draws each day.
 - **Stability (8):** an edge's identity is `sorted(pair) + sign(rho)`
   (`stability.edge_key`), so a correlation that flips sign does not count
   as recurring. `best_lag_per_pair` collapses a pair's surviving lags to

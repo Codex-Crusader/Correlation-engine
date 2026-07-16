@@ -109,7 +109,7 @@ __PLACEBO_PARTIAL_CELL__
   </div>
   <div class="panel">
     <h3>Noise - placebo panel</h3>
-    <p>The identical analysis run on phase-randomized surrogates: same wiggliness, no real relationships. If this side has edges too, calibrate your trust accordingly.</p>
+    <p>The identical analysis run on IAAFT surrogates: same values, same wiggliness, no real relationships. If this side has edges too, calibrate your trust accordingly.</p>
     <svg id="graph-placebo" viewBox="0 0 460 460"></svg>
   </div>
 </section>

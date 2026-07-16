@@ -153,6 +153,9 @@ def main():
           f"{n_flagged} of {len(survivors)} survivors fade after conditioning")
 
     # Step 7: what does pure noise produce under the identical pipeline?
+    # Seeded by the run date: the committed noise baseline is reproducible
+    # bit-for-bit from the audit trail, while each day still gets fresh
+    # surrogate draws instead of reusing one noise universe forever.
     placebo = run_placebo_panel(
         series_by_id,
         settings["max_lag_days"],
@@ -160,11 +163,12 @@ def main():
         settings["fdr_q"],
         settings["min_abs_rho"],
         settings["placebo_reps"],
+        seed=int(today.strftime("%Y%m%d")),
         conditioner_id=conditioner_id,
         conditioner=conditioner,
         partial_min_overlap=settings.get("partial_min_overlap", 0),
     )
-    placebo["example_edges"] = [edge_dict(r) for r in best_lag_per_pair(placebo["example_edges"])]
+    placebo["example_edges"] = [edge_dict(r) for r in placebo["example_edges"]]
     print(f"placebo: mean {placebo['mean_survivors']:.1f} edges across {placebo['reps']} noise universes")
 
     # Step 8: append today's survivors to history, then apply stability.

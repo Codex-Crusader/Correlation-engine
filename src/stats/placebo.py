@@ -26,19 +26,8 @@ import numpy as np
 import pandas as pd
 
 from .correction import apply_correction
-from .correlate import lagged_correlations
+from .correlate import best_lag_per_pair, lagged_correlations
 from .partial import annotate_partials
-
-
-def phase_randomize(values: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-    """Surrogate with the same power spectrum but random phases."""
-    n = len(values)
-    spectrum = np.fft.rfft(values)
-    phases = np.exp(1j * rng.uniform(0.0, 2.0 * np.pi, len(spectrum)))
-    phases[0] = 1.0  # keep the mean
-    if n % 2 == 0:
-        phases[-1] = 1.0  # Nyquist bin must stay real
-    return np.fft.irfft(spectrum * phases, n=n)
 
 
 def iaaft_surrogate(values: np.ndarray, rng: np.random.Generator,
@@ -71,8 +60,13 @@ def iaaft_surrogate(values: np.ndarray, rng: np.random.Generator,
 def surrogate_series(series: pd.Series, rng: np.random.Generator) -> pd.Series:
     """IAAFT surrogate of a series, preserving its missing-data pattern.
 
-    NaNs are linearly interpolated for the FFT only, then punched back out,
-    so the surrogate faces the same overlap constraints as the original.
+    NaNs are linearly interpolated before the transform and punched back out
+    after, so the surrogate faces the same overlap constraints as the
+    original. The interpolated values do enter the surrogate's value pool,
+    so on gappy series (market data with weekend holes) the exact-marginal
+    guarantee applies to the filled series, not the observed one - a slightly
+    smoother pool, which if anything makes the noise baseline a touch
+    harsher, never softer.
     """
     missing = series.isna()
     filled = series.interpolate(limit_direction="both")
@@ -100,6 +94,12 @@ def _run_one_rep(args):
         r for r in results
         if r.q_value < fdr_q and abs(r.rho) >= min_abs_rho
     ]
+    # Collapse to one edge per pair BEFORE counting or annotating, exactly as
+    # the real path does. A surviving pair typically clears the filters at
+    # many adjacent lags, so skipping this step inflates the noise count
+    # roughly tenfold relative to the real side's, and the calibration ratio
+    # divides one by the other.
+    survivors = best_lag_per_pair(survivors)
     if conditioner is not None:
         # Condition surrogate edges on the REAL conditioner: surrogates are
         # independent of it by construction, so whatever fraction still
@@ -121,8 +121,10 @@ def run_placebo_panel(series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
     worker count -- including n_jobs=1, which skips the pool entirely.
 
     Returns a dict with the per-rep counts of edges that survive the same
-    q-value and effect-size filters the real analysis uses, plus the edges
-    from the first rep so the site can draw an example noise graph.
+    q-value, effect-size, and best-lag-per-pair steps the real analysis
+    uses (one edge per pair, so the counts are directly comparable to
+    n_survivors_today), plus the edges from the first rep so the site can
+    draw an example noise graph.
 
     When a conditioner is given, each rep's surviving noise edges also get
     the partial-correlation annotation, and the returned dict reports how
@@ -130,7 +132,7 @@ def run_placebo_panel(series_by_id, max_lag, min_overlap, fdr_q, min_abs_rho,
     conditioner by construction, so any common-driver flag it earns is
     luck: partial_flagged_fraction is the flag's false-positive rate, and
     partial_held_fraction says how cheap the "holds" outcome is (measured
-    ~0.94 on this pool, so holding is close to the default, not evidence).
+    ~0.90 on this pool, so holding is close to the default, not evidence).
     """
     child_seeds = np.random.SeedSequence(seed).spawn(reps)
     jobs = [
