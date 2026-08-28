@@ -11,6 +11,7 @@
 ![Server Count](https://img.shields.io/badge/Servers-0-green)
 
 **[See the live site](https://codex-crusader.github.io/Correlation-engine/) - rebuilt daily by GitHub Actions. No server, no database, no paid APIs.**
+(disabled daily workflow because it ate into my workflow limits too much, the static page is still available)
 
 ---
 
