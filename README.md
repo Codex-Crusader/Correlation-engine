@@ -10,7 +10,7 @@
 ![Zero Is Valid](https://img.shields.io/badge/0%20findings-a%20valid%20result-yellow)
 ![Server Count](https://img.shields.io/badge/Servers-0-green)
 
-> **Written up in full:** [codex-crusader.github.io/projects/correlation-engine/](https://codex-crusader.github.io/projects/correlation-engine/) covers the problem, the architecture, the results and what it deliberately does not do.
+> **Written up in full:** [Correlation Engine: testing every finding against pure noise](https://codex-crusader.github.io/writing/correlation-engine-noise-baseline/)
 
 **[See the live site](https://codex-crusader.github.io/Correlation-engine/) - rebuilt daily by GitHub Actions. No server, no database, no paid APIs.**
 (disabled daily workflow because it ate into my workflow limits too much, the static page is still available)
